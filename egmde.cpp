@@ -337,7 +337,13 @@ void ExampleWindowManagerPolicy::pointer_resize(Window const& window, Point curs
             movement.dy = zero_dy;
     }
 
-    resize(window_info, top_left + is_left_resize*movement.dx + is_top_resize*movement.dy, {new_width, new_height});
+    if (!is_left_resize)
+        movement.dx = zero_dx;
+
+    if (!is_top_resize)
+        movement.dy = zero_dy;
+
+    resize(window_info, top_left + movement, {new_width, new_height});
 }
 
 void ExampleWindowManagerPolicy::resize(WindowInfo& window_info, Point new_pos, Size new_size)

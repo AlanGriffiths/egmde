@@ -190,6 +190,9 @@ bool ExampleWindowManagerPolicy::handle_touch_event(MirTouchEvent const* event)
         case mir_touch_action_change:
             is_select = false;
             break;
+
+        case mir_touch_actions:
+            return false;
         }
     }
 

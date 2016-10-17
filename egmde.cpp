@@ -22,6 +22,7 @@
 
 #include <miral/runner.h>
 #include <miral/set_window_managment_policy.h>
+#include <miral/keymap.h>
 
 #include <linux/input.h>
 
@@ -56,19 +57,22 @@ public:
 
 private:
     void pointer_resize(Window const& window, Point cursor, Point old_cursor);
-    void resize(WindowInfo& window_info, Point new_pos, Size new_size);
 
-    // State held for move/resize by pointer
-    Point old_cursor{};
-    bool resizing = false;
+    // State held for move/resize gesture by pointer
+    bool pointer_resizing = false;
     bool is_left_resize = false;
     bool is_top_resize = false;
 
-    // State held for move/resize by touch
+    // State held for move/resize gesture by touch
     int old_touch_pinch_top = 0;
     int old_touch_pinch_left = 0;
     int old_touch_pinch_width = 0;
     int old_touch_pinch_height = 0;
+    bool pinching = false;
+
+    void end_gesture();
+    void keep_size_within_limits(
+        WindowInfo const& window_info, Displacement& delta, Width& new_width, Height& new_height) const;
 };
 }
 
@@ -78,6 +82,7 @@ int main(int argc, char const* argv[])
 
     return runner.run_with(
         {
+            miral::Keymap{},
             set_window_managment_policy<ExampleWindowManagerPolicy>()
         });
 }
@@ -103,7 +108,15 @@ bool ExampleWindowManagerPolicy::handle_pointer_event(MirPointerEvent const* eve
     auto const shift_state = mir_pointer_event_modifiers(event) & shift_states;
     Point const cursor{
         mir_pointer_event_axis_value(event, mir_pointer_axis_x),
-        mir_pointer_event_axis_value(event, mir_pointer_axis_y)};
+        mir_pointer_event_axis_value(event, mir_pointer_axis_y)
+    };
+
+    Displacement movement{
+        mir_pointer_event_axis_value(event, mir_pointer_axis_relative_x),
+        mir_pointer_event_axis_value(event, mir_pointer_axis_relative_y)
+    };
+
+    auto old_cursor = cursor - movement;
 
     bool consumes_event = false;
     bool is_resize_event = false;
@@ -122,26 +135,22 @@ bool ExampleWindowManagerPolicy::handle_pointer_event(MirPointerEvent const* eve
             {
                 if (auto const target = tools.window_at(old_cursor))
                 {
-                    tools.select_active_window(target);
-                    tools.drag_active_window(cursor - old_cursor);
+                    if (tools.select_active_window(target) == target)
+                        tools.drag_active_window(movement);
                 }
                 consumes_event = true;
             }
-
-            if (mir_pointer_event_button_state(event, mir_pointer_button_tertiary))
+            else if (mir_pointer_event_button_state(event, mir_pointer_button_tertiary))
             {
-                if (resizing)
+                if (auto const target = tools.window_at(old_cursor))
                 {
-                    if (auto window = tools.active_window())
-                    {
-                        pointer_resize(window, cursor, old_cursor);
+                    if (!pointer_resizing)
+                        is_resize_event = tools.select_active_window(target) == target;
+                    else
                         is_resize_event = true;
-                    }
-                }
-                else if (auto window = tools.select_active_window(tools.window_at(old_cursor)))
-                {
-                    pointer_resize(window, cursor, old_cursor);
-                    is_resize_event = true;
+
+                    if (is_resize_event)
+                        pointer_resize(target, cursor, old_cursor);
                 }
 
                 consumes_event = true;
@@ -153,7 +162,10 @@ bool ExampleWindowManagerPolicy::handle_pointer_event(MirPointerEvent const* eve
         break;
     }
 
-    resizing = is_resize_event;
+    if (pointer_resizing && !is_resize_event)
+        end_gesture();
+
+    pointer_resizing = is_resize_event;
     old_cursor = cursor;
     return consumes_event;
 }
@@ -171,11 +183,9 @@ bool ExampleWindowManagerPolicy::handle_touch_event(MirTouchEvent const* event)
         total_y += mir_touch_event_axis_value(event, i, mir_touch_axis_y);
     }
 
-    Point const touch_center{total_x/count, total_y/count};
+    Point cursor{total_x/count, total_y/count};
 
     bool is_drag = true;
-    bool is_select = true;
-    
     for (auto i = 0U; i != count; ++i)
     {
         switch (mir_touch_event_action(event, i))
@@ -185,14 +195,9 @@ bool ExampleWindowManagerPolicy::handle_touch_event(MirTouchEvent const* event)
 
         case mir_touch_action_down:
             is_drag = false;
-            break;
 
-        case mir_touch_action_change:
-            is_select = false;
-            break;
-
-        case mir_touch_actions:
-            return false;
+        default:
+            continue;
         }
     }
 
@@ -230,16 +235,9 @@ bool ExampleWindowManagerPolicy::handle_touch_event(MirTouchEvent const* event)
     }
 
     bool consumes_event = false;
-    
-    if (is_select)
+    if (is_drag)
     {
-        if (auto const& window = tools.window_at(touch_center))
-            tools.select_active_window(window);
-    }
-
-    if (count == 3)
-    {
-        if (is_drag)
+        if (count == 3)
         {
             if (auto window = tools.active_window())
             {
@@ -247,24 +245,40 @@ bool ExampleWindowManagerPolicy::handle_touch_event(MirTouchEvent const* event)
                 auto const delta_width = DeltaX{touch_pinch_width - old_touch_pinch_width};
                 auto const delta_height = DeltaY{touch_pinch_height - old_touch_pinch_height};
 
-                Displacement const movement{
-                    touch_pinch_left - old_touch_pinch_left,
-                    touch_pinch_top - old_touch_pinch_top};
+                auto new_width = std::max(old_size.width + delta_width, Width{5});
+                auto new_height = std::max(old_size.height + delta_height, Height{5});
+                Displacement delta{
+                    DeltaX{touch_pinch_left - old_touch_pinch_left},
+                    DeltaY{touch_pinch_top  - old_touch_pinch_top}};
 
-                auto const new_width = std::max(old_size.width + delta_width, min_width);
-                auto const new_height = std::max(old_size.height + delta_height, min_height);
+                auto& window_info = tools.info_for(window);
+                keep_size_within_limits(window_info, delta, new_width, new_height);
 
-                resize(tools.info_for(window), window.top_left() + movement, {new_width, new_height});
+                auto new_pos = window.top_left() + delta;
+                Size new_size{new_width, new_height};
+
+                WindowSpecification modifications;
+                modifications.top_left() = new_pos;
+                modifications.size() = new_size;
+                tools.modify_window(window_info, modifications);
+                pinching = true;
             }
             consumes_event = true;
         }
-
-        old_touch_pinch_top = touch_pinch_top;
-        old_touch_pinch_left = touch_pinch_left;
-        old_touch_pinch_width = touch_pinch_width;
-        old_touch_pinch_height = touch_pinch_height;
+    }
+    else
+    {
+        if (auto const& window = tools.window_at(cursor))
+            tools.select_active_window(window);
     }
 
+    if (!consumes_event && pinching)
+        end_gesture();
+
+    old_touch_pinch_top = touch_pinch_top;
+    old_touch_pinch_left = touch_pinch_left;
+    old_touch_pinch_width = touch_pinch_width;
+    old_touch_pinch_height = touch_pinch_height;
     return consumes_event;
 }
 
@@ -301,7 +315,7 @@ void ExampleWindowManagerPolicy::pointer_resize(Window const& window, Point curs
     auto const top_left = window.top_left();
     Rectangle const old_pos{top_left, window.size()};
 
-    if (!resizing)
+    if (!pointer_resizing)
     {
         auto anchor = old_pos.bottom_right();
 
@@ -346,15 +360,73 @@ void ExampleWindowManagerPolicy::pointer_resize(Window const& window, Point curs
     if (!is_top_resize)
         movement.dy = zero_dy;
 
-    resize(window_info, top_left + movement, {new_width, new_height});
-}
+    Point new_pos = top_left + movement;
+    Size new_size = {new_width, new_height};
 
-void ExampleWindowManagerPolicy::resize(WindowInfo& window_info, Point new_pos, Size new_size)
-{
-    window_info.constrain_resize(new_pos, new_size);
-
+    keep_size_within_limits(window_info, movement, new_width, new_height);
     WindowSpecification modifications;
     modifications.top_left() = new_pos;
     modifications.size() = new_size;
     tools.modify_window(window_info, modifications);
+}
+
+void ExampleWindowManagerPolicy::end_gesture()
+{
+    if (!pointer_resizing  && !pinching)
+        return;
+
+    if (auto window = tools.active_window())
+    {
+        auto& window_info = tools.info_for(window);
+
+        auto new_size = window.size();
+        auto new_pos  = window.top_left();
+        window_info.constrain_resize(new_pos, new_size);
+
+        WindowSpecification modifications;
+        modifications.top_left() = new_pos;
+        modifications.size() = new_size;
+        tools.modify_window(window_info, modifications);
+    }
+
+    pointer_resizing = false;
+    pinching = false;
+}
+
+void ExampleWindowManagerPolicy::keep_size_within_limits(
+    WindowInfo const& window_info, Displacement& delta, Width& new_width, Height& new_height) const
+{
+    auto const min_width  = std::max(window_info.min_width(), Width{5});
+    auto const min_height = std::max(window_info.min_height(), Height{5});
+
+    if (new_width < min_width)
+    {
+        new_width = min_width;
+        if (delta.dx > DeltaX{0})
+            delta.dx = DeltaX{0};
+    }
+
+    if (new_height < min_height)
+    {
+        new_height = min_height;
+        if (delta.dy > DeltaY{0})
+            delta.dy = DeltaY{0};
+    }
+
+    auto const max_width  = window_info.max_width();
+    auto const max_height = window_info.max_height();
+
+    if (new_width > max_width)
+    {
+        new_width = max_width;
+        if (delta.dx < DeltaX{0})
+            delta.dx = DeltaX{0};
+    }
+
+    if (new_height > max_height)
+    {
+        new_height = max_height;
+        if (delta.dy < DeltaY{0})
+            delta.dy = DeltaY{0};
+    }
 }

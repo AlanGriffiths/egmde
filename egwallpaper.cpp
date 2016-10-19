@@ -45,7 +45,7 @@ void render_pattern(MirGraphicsRegion* region, uint8_t pattern[])
 }
 }
 
-void Wallpaper::operator()(miral::toolkit::Connection connection)
+void Wallpaper::start(miral::toolkit::Connection connection)
 {
     {
         std::lock_guard<decltype(mutex)> lock{mutex};
@@ -54,6 +54,16 @@ void Wallpaper::operator()(miral::toolkit::Connection connection)
 
     enqueue_work([this]{ create_surface(); });
     start_work();
+}
+
+void Wallpaper::stop()
+{
+    {
+        std::lock_guard<decltype(mutex)> lock{mutex};
+        surface.reset();
+        connection.reset();
+    }
+    stop_work();
 }
 
 void Wallpaper::create_surface()
@@ -81,27 +91,6 @@ void Wallpaper::create_surface()
     mir_buffer_stream_swap_buffers_sync(buffer_stream);
 }
 
-void Wallpaper::operator()(std::weak_ptr<mir::scene::Session> const& application)
-{
-    std::lock_guard<decltype(mutex)> lock{mutex};
-    this->weak_session = application;
-}
-
-auto Wallpaper::application() const -> miral::Application
-{
-    std::lock_guard<decltype(mutex)> lock{mutex};
-    return weak_session.lock();
-}
-
-void Wallpaper::stop()
-{
-    {
-        std::lock_guard<decltype(mutex)> lock{mutex};
-        surface.reset();
-        connection.reset();
-    }
-    stop_work();
-}
 
 Worker::~Worker()
 {

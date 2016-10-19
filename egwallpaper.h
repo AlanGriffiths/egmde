@@ -53,10 +53,7 @@ private:
 class Wallpaper : Worker
 {
 public:
-    void operator()(miral::toolkit::Connection connection);
-    void operator()(std::weak_ptr<mir::scene::Session> const& application);
-
-    auto application() const -> miral::Application;
+    void start(miral::toolkit::Connection connection);
 
     void stop();
 
@@ -65,7 +62,6 @@ private:
     std::mutex mutable mutex;
     miral::toolkit::Connection connection;
     miral::toolkit::Surface surface;
-    std::weak_ptr<mir::scene::Session> weak_session;
 
     void create_surface();
 };

@@ -16,10 +16,13 @@
  * Authored by: Alan Griffiths <alan@octopull.co.uk>
  */
 
+#include "egwallpaper.h"
+
 #include <miral/canonical_window_manager.h>
 #include <miral/window_info.h>
 #include <miral/window_manager_tools.h>
 
+#include <miral/internal_client.h>
 #include <miral/runner.h>
 #include <miral/set_window_managment_policy.h>
 
@@ -54,6 +57,8 @@ public:
     // Resize window: three finger pinch
     bool handle_touch_event(MirTouchEvent const* event) override;
 
+    void on_stop();
+
 private:
     void pointer_resize(Window const& window, Point cursor, Point old_cursor);
 
@@ -79,8 +84,15 @@ int main(int argc, char const* argv[])
 {
     miral::MirRunner runner{argc, argv};
 
+    Wallpaper wallpaper;
+
+    runner.add_stop_callback([&] { wallpaper.stop(); });
+
     return runner.run_with(
         {
+            miral::StartupInternalClient{"wallpaper",
+                                         [&](toolkit::Connection connection) { wallpaper(connection); },
+                                         [&](std::weak_ptr<mir::scene::Session> const session){wallpaper(session); }},
             set_window_managment_policy<ExampleWindowManagerPolicy>()
         });
 }

@@ -10,6 +10,6 @@ pkg_check_modules(MIRAL miral REQUIRED)
 
 include_directories(include SYSTEM ${MIRAL_INCLUDE_DIRS})
 
-add_executable(egmde egmde.cpp)
+add_executable(egmde egmde.cpp egwallpaper.cpp egwallpaper.h)
 
 target_link_libraries(egmde ${MIRAL_LDFLAGS})

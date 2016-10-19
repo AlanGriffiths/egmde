@@ -22,7 +22,6 @@
 
 #include <miral/runner.h>
 #include <miral/set_window_managment_policy.h>
-#include <miral/keymap.h>
 
 #include <linux/input.h>
 
@@ -82,7 +81,6 @@ int main(int argc, char const* argv[])
 
     return runner.run_with(
         {
-            miral::Keymap{},
             set_window_managment_policy<ExampleWindowManagerPolicy>()
         });
 }

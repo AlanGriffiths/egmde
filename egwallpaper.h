@@ -53,8 +53,11 @@ private:
 class Wallpaper : Worker
 {
 public:
-    void start(miral::toolkit::Connection connection);
+    // These operators are the protocol for an "Internal Client"
+    void operator()(miral::toolkit::Connection c) { start(c); }
+    void operator()(std::weak_ptr<mir::scene::Session> const&){ }
 
+    void start(miral::toolkit::Connection connection);
     void stop();
 
 private:

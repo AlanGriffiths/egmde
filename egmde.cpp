@@ -90,9 +90,7 @@ int main(int argc, char const* argv[])
 
     return runner.run_with(
         {
-            miral::StartupInternalClient{"wallpaper",
-                                         [&](toolkit::Connection connection) { wallpaper.start(connection); },
-                                         [&](std::weak_ptr<mir::scene::Session> const){ }},
+            miral::StartupInternalClient{"wallpaper", std::ref(wallpaper)},
             set_window_managment_policy<ExampleWindowManagerPolicy>()
         });
 }

@@ -19,8 +19,8 @@
 #ifndef EGMDE_EGWALLPAPER_H
 #define EGMDE_EGWALLPAPER_H
 
-#include <miral/toolkit/connection.h>
-#include <miral/toolkit/surface.h>
+#include <mir/client/connection.h>
+#include <mir/client/window.h>
 
 #include <miral/application.h>
 
@@ -54,17 +54,17 @@ class Wallpaper : Worker
 {
 public:
     // These operators are the protocol for an "Internal Client"
-    void operator()(miral::toolkit::Connection c) { start(c); }
+    void operator()(mir::client::Connection c) { start(c); }
     void operator()(std::weak_ptr<mir::scene::Session> const&){ }
 
-    void start(miral::toolkit::Connection connection);
+    void start(mir::client::Connection connection);
     void stop();
 
 private:
 
     std::mutex mutable mutex;
-    miral::toolkit::Connection connection;
-    miral::toolkit::Surface surface;
+    mir::client::Connection connection;
+    mir::client::Window surface;
 
     void create_surface();
 };

@@ -18,14 +18,14 @@
 
 #include "egwallpaper.h"
 
-#include <miral/toolkit/surface_spec.h>
+#include <mir/client/window_spec.h>
 
 #include <mir_toolkit/mir_buffer_stream.h>
 
 #include <cstring>
 
 
-using namespace miral::toolkit;
+using namespace mir::client;
 
 namespace
 {
@@ -45,7 +45,7 @@ void render_pattern(MirGraphicsRegion* region, uint8_t pattern[])
 }
 }
 
-void Wallpaper::start(miral::toolkit::Connection connection)
+void Wallpaper::start(Connection connection)
 {
     {
         std::lock_guard<decltype(mutex)> lock{mutex};
@@ -70,20 +70,19 @@ void Wallpaper::create_surface()
 {
     std::lock_guard<decltype(mutex)> lock{mutex};
 
-    auto const spec = SurfaceSpec::for_normal_surface(
-        connection, 100, 100, mir_pixel_format_xrgb_8888)
+    surface = WindowSpec::for_gloss(
+        connection, 100, 100)
+        .set_pixel_format(mir_pixel_format_xrgb_8888)
         .set_buffer_usage(mir_buffer_usage_software)
-        .set_type(mir_surface_type_gloss)
-        .set_name("wallpaper");
-
-    mir_surface_spec_set_fullscreen_on_output(spec, 0);
-
-    surface = spec.create_surface();
+        .set_type(mir_window_type_gloss)
+        .set_name("wallpaper")
+        .set_fullscreen_on_output(0)
+        .create_window();
 
     uint8_t pattern[4] = { 0x14, 0x48, 0xDD, 0xFF };
 
     MirGraphicsRegion graphics_region;
-    MirBufferStream* buffer_stream = mir_surface_get_buffer_stream(surface);
+    MirBufferStream* buffer_stream = mir_window_get_buffer_stream(surface);
 
     mir_buffer_stream_get_graphics_region(buffer_stream, &graphics_region);
 

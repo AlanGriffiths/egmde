@@ -45,7 +45,6 @@ private:
     std::condition_variable work_cv;
     WorkQueue work_queue;
     bool work_done = false;
-    std::thread worker;
 
     void do_work();
 };

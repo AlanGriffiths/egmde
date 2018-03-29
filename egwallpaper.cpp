@@ -72,9 +72,6 @@ void Wallpaper::create_surface()
 
     surface = WindowSpec::for_gloss(
         connection, 100, 100)
-        .set_pixel_format(mir_pixel_format_xrgb_8888)
-        .set_buffer_usage(mir_buffer_usage_software)
-        .set_type(mir_window_type_gloss)
         .set_name("wallpaper")
         .set_fullscreen_on_output(0)
         .create_window();

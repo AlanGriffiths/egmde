@@ -24,7 +24,7 @@
 
 #include <miral/internal_client.h>
 #include <miral/runner.h>
-#include <miral/set_window_managment_policy.h>
+#include <miral/set_window_management_policy.h>
 
 #include <linux/input.h>
 
@@ -56,6 +56,15 @@ public:
     // Move window  : three finger drag
     // Resize window: three finger pinch
     bool handle_touch_event(MirTouchEvent const* event) override;
+
+    Rectangle confirm_placement_on_display(
+        WindowInfo const& window_info, MirWindowState new_state, Rectangle const& new_placement) override;
+
+    void handle_request_drag_and_drop(WindowInfo& window_info) override;
+
+    void handle_request_move(WindowInfo& window_info, MirInputEvent const* input_event) override;
+
+    void handle_request_resize(WindowInfo& window_info, MirInputEvent const* input_event, MirResizeEdge edge) override;
 
     void on_stop();
 
@@ -91,7 +100,7 @@ int main(int argc, char const* argv[])
     return runner.run_with(
         {
             miral::StartupInternalClient{"wallpaper", std::ref(wallpaper)},
-            set_window_managment_policy<ExampleWindowManagerPolicy>()
+            set_window_management_policy<ExampleWindowManagerPolicy>()
         });
 }
 
@@ -203,7 +212,7 @@ bool ExampleWindowManagerPolicy::handle_touch_event(MirTouchEvent const* event)
 
         case mir_touch_action_down:
             is_drag = false;
-
+            // Falls through
         default:
             continue;
         }
@@ -437,4 +446,23 @@ void ExampleWindowManagerPolicy::keep_size_within_limits(
         if (delta.dy < DeltaY{0})
             delta.dy = DeltaY{0};
     }
+}
+
+Rectangle ExampleWindowManagerPolicy::confirm_placement_on_display(
+    WindowInfo const& /*window_info*/, MirWindowState /*new_state*/, Rectangle const& new_placement)
+{
+    return new_placement;
+}
+
+void ExampleWindowManagerPolicy::handle_request_drag_and_drop(WindowInfo& /*window_info*/)
+{
+}
+
+void ExampleWindowManagerPolicy::handle_request_move(WindowInfo& /*window_info*/, MirInputEvent const* /*input_event*/)
+{
+}
+
+void ExampleWindowManagerPolicy::handle_request_resize(
+    WindowInfo& /*window_info*/, MirInputEvent const* /*input_event*/, MirResizeEdge /*edge*/)
+{
 }

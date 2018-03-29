@@ -25,6 +25,7 @@
 #include <miral/application.h>
 
 #include <condition_variable>
+#include <functional>
 #include <mutex>
 #include <thread>
 #include <queue>

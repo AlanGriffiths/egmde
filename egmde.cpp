@@ -48,7 +48,6 @@ public:
     // Switch apps  : click on the corresponding window
     // Switch window: click on the corresponding window
     // Move window  : Alt-leftmousebutton drag
-    // Resize window: Alt-middle_button drag
     bool handle_pointer_event(MirPointerEvent const* event) override;
 
     // Switch apps  : tap on the corresponding window
@@ -92,7 +91,7 @@ private:
     void keep_size_within_limits(
         WindowInfo const& window_info, Displacement& delta, Width& new_width, Height& new_height) const;
 
-    void begin_pointer_gesture(WindowInfo const& window_info, MirInputEvent const* input_event, PointerGesture gesture);
+    bool begin_pointer_gesture(WindowInfo const& window_info, MirInputEvent const* input_event, PointerGesture gesture);
 };
 }
 
@@ -469,27 +468,28 @@ void ExampleWindowManagerPolicy::handle_request_drag_and_drop(WindowInfo& /*wind
 
 void ExampleWindowManagerPolicy::handle_request_move(WindowInfo& window_info, MirInputEvent const* input_event)
 {
-    if (mir_input_event_get_type(input_event) == mir_input_event_type_pointer)
-        begin_pointer_gesture(window_info, input_event, pointer_gesture_moving);
+    begin_pointer_gesture(window_info, input_event, pointer_gesture_moving);
 }
 
 void ExampleWindowManagerPolicy::handle_request_resize(
     WindowInfo& window_info, MirInputEvent const* input_event, MirResizeEdge edge)
 {
-    if (mir_input_event_get_type(input_event) == mir_input_event_type_pointer)
+    if (begin_pointer_gesture(window_info, input_event, pointer_gesture_resizing))
     {
-        begin_pointer_gesture(window_info, input_event, pointer_gesture_resizing);
         resize_edge = edge;
         resize_top_left = pointer_gesture_window.top_left();
         resize_size = pointer_gesture_window.size();
     }
 }
 
-void ExampleWindowManagerPolicy::begin_pointer_gesture(
+bool ExampleWindowManagerPolicy::begin_pointer_gesture(
     WindowInfo const& window_info,
     MirInputEvent const* input_event,
     PointerGesture gesture)
 {
+    if (mir_input_event_get_type(input_event) != mir_input_event_type_pointer)
+        return false;
+
     MirPointerEvent const* const pointer_event = mir_input_event_get_pointer_event(input_event);
     pointer_gesture = gesture;
     pointer_gesture_window = window_info.window();
@@ -503,4 +503,6 @@ void ExampleWindowManagerPolicy::begin_pointer_gesture(
             break;
         }
     }
+
+    return true;
 }

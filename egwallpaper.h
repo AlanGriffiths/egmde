@@ -64,9 +64,9 @@ private:
 
     std::mutex mutable mutex;
     mir::client::Connection connection;
-    mir::client::Window surface;
+    mir::client::Window window;
 
-    void create_surface();
+    void create_window();
 };
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016 Octopull Ltd.
+ * Copyright © 2016-2018 Octopull Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -18,10 +18,13 @@
 
 #include "egwallpaper.h"
 
+#include <mir/client/display_config.h>
+#include <mir/client/surface.h>
 #include <mir/client/window_spec.h>
 
 #include <mir_toolkit/mir_buffer_stream.h>
 
+#include <algorithm>
 #include <cstring>
 
 
@@ -52,7 +55,7 @@ void Wallpaper::start(Connection connection)
         this->connection = connection;
     }
 
-    enqueue_work([this]{ create_surface(); });
+    enqueue_work([this]{ create_window(); });
     start_work();
 }
 
@@ -60,26 +63,42 @@ void Wallpaper::stop()
 {
     {
         std::lock_guard<decltype(mutex)> lock{mutex};
-        surface.reset();
+        window.reset();
         connection.reset();
     }
     stop_work();
 }
 
-void Wallpaper::create_surface()
+void Wallpaper::create_window()
 {
+    unsigned width = 0;
+    unsigned height = 0;
+
+    DisplayConfig{connection}.for_each_output([&width, &height](MirOutput const* output)
+    {
+        if (!mir_output_is_enabled(output))
+            return;
+
+         width = std::max(width, mir_output_get_logical_width(output));
+         height = std::max(height, mir_output_get_logical_height(output));
+    });
+    
     std::lock_guard<decltype(mutex)> lock{mutex};
 
-    surface = WindowSpec::for_gloss(
-        connection, 100, 100)
+    Surface surface{mir_connection_create_render_surface_sync(connection, width, height)};
+
+    auto const buffer_stream =
+        mir_render_surface_get_buffer_stream(surface, width, height, mir_pixel_format_xrgb_8888);
+
+    window = WindowSpec::for_gloss(connection, width, height)
         .set_name("wallpaper")
         .set_fullscreen_on_output(0)
+        .add_surface(surface, width, height, 0, 0)
         .create_window();
 
     uint8_t pattern[4] = { 0x14, 0x48, 0xDD, 0xFF };
 
     MirGraphicsRegion graphics_region;
-    MirBufferStream* buffer_stream = mir_window_get_buffer_stream(surface);
 
     mir_buffer_stream_get_graphics_region(buffer_stream, &graphics_region);
 

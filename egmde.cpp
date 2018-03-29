@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016 Octopull Ltd.
+ * Copyright © 2016-2018 Octopull Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -66,15 +66,20 @@ public:
 
     void handle_request_resize(WindowInfo& window_info, MirInputEvent const* input_event, MirResizeEdge edge) override;
 
-    void on_stop();
-
 private:
-    void pointer_resize(Window const& window, Point cursor, Point old_cursor);
 
     // State held for move/resize gesture by pointer
-    bool pointer_resizing = false;
-    bool is_left_resize = false;
-    bool is_top_resize = false;
+    enum PointerGesture {
+        pointer_gesture_none,
+        pointer_gesture_moving,
+        pointer_gesture_resizing
+    } pointer_gesture = pointer_gesture_none;
+    MirPointerButton pointer_gesture_button;
+    miral::Window pointer_gesture_window;
+    unsigned pointer_gesture_shift_keys = 0;
+    MirResizeEdge resize_edge = mir_resize_edge_none;
+    Point resize_top_left;
+    Size resize_size;
 
     // State held for move/resize gesture by touch
     int old_touch_pinch_top = 0;
@@ -86,6 +91,8 @@ private:
     void end_gesture();
     void keep_size_within_limits(
         WindowInfo const& window_info, Displacement& delta, Width& new_width, Height& new_height) const;
+
+    void begin_pointer_gesture(WindowInfo const& window_info, MirInputEvent const* input_event, PointerGesture gesture);
 };
 }
 
@@ -133,45 +140,88 @@ bool ExampleWindowManagerPolicy::handle_pointer_event(MirPointerEvent const* eve
         mir_pointer_event_axis_value(event, mir_pointer_axis_relative_y)
     };
 
-    auto old_cursor = cursor - movement;
-
     bool consumes_event = false;
-    bool is_resize_event = false;
 
-    switch (action)
+    switch (pointer_gesture)
     {
-    case mir_pointer_action_button_down:
-        if (auto const window = tools.window_at(cursor))
-            tools.select_active_window(window);
+    case pointer_gesture_moving:
+        if (action == mir_pointer_action_motion &&
+            shift_state == pointer_gesture_shift_keys &&
+            mir_pointer_event_button_state(event, pointer_gesture_button))
+        {
+            if (pointer_gesture_window &&
+                tools.select_active_window(pointer_gesture_window) == pointer_gesture_window)
+            {
+                tools.drag_active_window(movement);
+            }
+            else
+            {
+                pointer_gesture = pointer_gesture_none;
+            }
+
+            consumes_event = true;
+        }
+        else
+        {
+            pointer_gesture = pointer_gesture_none;
+        }
         break;
 
-    case mir_pointer_action_motion:
-        if (shift_state == mir_input_event_modifier_alt)
+    case pointer_gesture_resizing:
+        if (action == mir_pointer_action_motion &&
+            shift_state == pointer_gesture_shift_keys &&
+            mir_pointer_event_button_state(event, pointer_gesture_button))
         {
-            if (mir_pointer_event_button_state(event, mir_pointer_button_primary))
+            if (pointer_gesture_window &&
+                tools.select_active_window(pointer_gesture_window) == pointer_gesture_window)
             {
-                if (auto const target = tools.window_at(old_cursor))
-                {
-                    if (tools.select_active_window(target) == target)
-                        tools.drag_active_window(movement);
-                }
-                consumes_event = true;
+                auto const top_left = resize_top_left;
+                Rectangle const old_pos{top_left, resize_size};
+
+                auto new_width = old_pos.size.width;
+                auto new_height = old_pos.size.height;
+
+                if (resize_edge & mir_resize_edge_east)
+                    new_width = old_pos.size.width + movement.dx;
+
+                if (resize_edge & mir_resize_edge_west)
+                    new_width = old_pos.size.width - movement.dx;
+
+                if (resize_edge & mir_resize_edge_north)
+                    new_height = old_pos.size.height - movement.dy;
+
+                if (resize_edge & mir_resize_edge_south)
+                    new_height = old_pos.size.height + movement.dy;
+
+                keep_size_within_limits(tools.info_for(pointer_gesture_window), movement, new_width, new_height);
+
+                Size new_size{new_width, new_height};
+
+                Point new_pos = top_left;
+
+                if (resize_edge & mir_resize_edge_west)
+                    new_pos.x = top_left.x + movement.dx;
+
+                if (resize_edge & mir_resize_edge_north)
+                    new_pos.y = top_left.y + movement.dy;
+
+                WindowSpecification modifications;
+                modifications.top_left() = new_pos;
+                modifications.size() = new_size;
+                tools.modify_window(pointer_gesture_window, modifications);
+                resize_top_left = new_pos;
+                resize_size = new_size;
             }
-            else if (mir_pointer_event_button_state(event, mir_pointer_button_tertiary))
+            else
             {
-                if (auto const target = tools.window_at(old_cursor))
-                {
-                    if (!pointer_resizing)
-                        is_resize_event = tools.select_active_window(target) == target;
-                    else
-                        is_resize_event = true;
-
-                    if (is_resize_event)
-                        pointer_resize(target, cursor, old_cursor);
-                }
-
-                consumes_event = true;
+                pointer_gesture = pointer_gesture_none;
             }
+
+            consumes_event = true;
+        }
+        else
+        {
+            pointer_gesture = pointer_gesture_none;
         }
         break;
 
@@ -179,11 +229,33 @@ bool ExampleWindowManagerPolicy::handle_pointer_event(MirPointerEvent const* eve
         break;
     }
 
-    if (pointer_resizing && !is_resize_event)
-        end_gesture();
+    if (!consumes_event)
+    {
+        switch (action)
+        {
+        case mir_pointer_action_button_down:
+            if (auto const window = tools.window_at(cursor))
+                tools.select_active_window(window);
+            break;
 
-    pointer_resizing = is_resize_event;
-    old_cursor = cursor;
+        case mir_pointer_action_motion:
+            if (shift_state == mir_input_event_modifier_alt&&
+                mir_pointer_event_button_state(event, mir_pointer_button_primary))
+            {
+                if (auto const target = tools.window_at(cursor - movement))
+                {
+                    if (tools.select_active_window(target) == target)
+                        tools.drag_active_window(movement);
+                }
+                consumes_event = true;
+            }
+            break;
+
+        default:
+            break;
+        }
+    }
+
     return consumes_event;
 }
 
@@ -325,71 +397,9 @@ bool ExampleWindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* e
     return false;
 }
 
-void ExampleWindowManagerPolicy::pointer_resize(Window const& window, Point cursor, Point old_cursor)
-{
-    auto& window_info = tools.info_for(window);
-
-    auto const top_left = window.top_left();
-    Rectangle const old_pos{top_left, window.size()};
-
-    if (!pointer_resizing)
-    {
-        auto anchor = old_pos.bottom_right();
-
-        for (auto const& corner : {
-            old_pos.top_right(),
-            old_pos.bottom_left(),
-            top_left})
-        {
-            if ((old_cursor - anchor).length_squared() <
-                (old_cursor - corner).length_squared())
-            {
-                anchor = corner;
-            }
-        }
-
-        is_left_resize = anchor.x != top_left.x;
-        is_top_resize  = anchor.y != top_left.y;
-    }
-
-    auto movement = cursor-old_cursor;
-
-    auto new_width  = old_pos.size.width  + (is_left_resize? -1 : 1) * movement.dx;
-    auto new_height = old_pos.size.height + (is_top_resize ? -1 : 1) * movement.dy;
-
-    if (new_width < min_width)
-    {
-        new_width = min_width;
-        if (movement.dx > zero_dx)
-            movement.dx = zero_dx;
-    }
-
-    if (new_height < min_height)
-    {
-        new_height = min_height;
-        if (movement.dy > zero_dy)
-            movement.dy = zero_dy;
-    }
-
-    if (!is_left_resize)
-        movement.dx = zero_dx;
-
-    if (!is_top_resize)
-        movement.dy = zero_dy;
-
-    Point new_pos = top_left + movement;
-    Size new_size = {new_width, new_height};
-
-    keep_size_within_limits(window_info, movement, new_width, new_height);
-    WindowSpecification modifications;
-    modifications.top_left() = new_pos;
-    modifications.size() = new_size;
-    tools.modify_window(window_info, modifications);
-}
-
 void ExampleWindowManagerPolicy::end_gesture()
 {
-    if (!pointer_resizing  && !pinching)
+    if (!pinching)
         return;
 
     if (auto window = tools.active_window())
@@ -406,7 +416,6 @@ void ExampleWindowManagerPolicy::end_gesture()
         tools.modify_window(window_info, modifications);
     }
 
-    pointer_resizing = false;
     pinching = false;
 }
 
@@ -458,11 +467,40 @@ void ExampleWindowManagerPolicy::handle_request_drag_and_drop(WindowInfo& /*wind
 {
 }
 
-void ExampleWindowManagerPolicy::handle_request_move(WindowInfo& /*window_info*/, MirInputEvent const* /*input_event*/)
+void ExampleWindowManagerPolicy::handle_request_move(WindowInfo& window_info, MirInputEvent const* input_event)
 {
+    if (mir_input_event_get_type(input_event) == mir_input_event_type_pointer)
+        begin_pointer_gesture(window_info, input_event, pointer_gesture_moving);
 }
 
 void ExampleWindowManagerPolicy::handle_request_resize(
-    WindowInfo& /*window_info*/, MirInputEvent const* /*input_event*/, MirResizeEdge /*edge*/)
+    WindowInfo& window_info, MirInputEvent const* input_event, MirResizeEdge edge)
 {
+    if (mir_input_event_get_type(input_event) == mir_input_event_type_pointer)
+    {
+        begin_pointer_gesture(window_info, input_event, pointer_gesture_resizing);
+        resize_edge = edge;
+        resize_top_left = pointer_gesture_window.top_left();
+        resize_size = pointer_gesture_window.size();
+    }
+}
+
+void ExampleWindowManagerPolicy::begin_pointer_gesture(
+    WindowInfo const& window_info,
+    MirInputEvent const* input_event,
+    PointerGesture gesture)
+{
+    MirPointerEvent const* const pointer_event = mir_input_event_get_pointer_event(input_event);
+    pointer_gesture = gesture;
+    pointer_gesture_window = window_info.window();
+    pointer_gesture_shift_keys = mir_pointer_event_modifiers(pointer_event) & shift_states;
+
+    for (auto button : {mir_pointer_button_primary, mir_pointer_button_secondary, mir_pointer_button_tertiary})
+    {
+        if (mir_pointer_event_button_state(pointer_event, button))
+        {
+            pointer_gesture_button = button;
+            break;
+        }
+    }
 }

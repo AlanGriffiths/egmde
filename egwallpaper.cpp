@@ -26,6 +26,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <sstream>
 
 
 using namespace mir::client;
@@ -110,16 +111,14 @@ void Wallpaper::create_window()
 
 void Wallpaper::operator()(std::string const& option)
 {
-    static uint8_t const purple[4] = { 0x35, 0x00, 0x4a, 0xFF };
-    static uint8_t const orange[4] = { 0x0a, 0x24, 0x77, 0xFF };
+    uint32_t value;
+    std::stringstream interpreter{option};
 
-    if (option == "purple")
+    if (interpreter >> std::hex >> value)
     {
-        memcpy(colour, purple, 4);
-    }
-    else if (option == "orange")
-    {
-        memcpy(colour, orange, 4);
+        colour[0] = value & 0xff;
+        colour[1] = (value >> 8) & 0xff;
+        colour[2] = (value >> 16) & 0xff;
     }
 }
 

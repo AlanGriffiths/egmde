@@ -106,7 +106,7 @@ int main(int argc, char const* argv[])
 
     return runner.run_with(
         {
-            CommandLineOption{std::ref(wallpaper), "wallpaper", "Colour of wallpaper [orange|purple]", "orange"},
+            CommandLineOption{std::ref(wallpaper), "wallpaper", "Colour of wallpaper RGB", "0x77240a"},
             miral::StartupInternalClient{"wallpaper", std::ref(wallpaper)},
             set_window_management_policy<ExampleWindowManagerPolicy>()
         });

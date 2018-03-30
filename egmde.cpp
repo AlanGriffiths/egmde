@@ -19,6 +19,7 @@
 #include "egwallpaper.h"
 
 #include <miral/canonical_window_manager.h>
+#include <miral/command_line_option.h>
 #include <miral/window_info.h>
 #include <miral/window_manager_tools.h>
 
@@ -105,6 +106,7 @@ int main(int argc, char const* argv[])
 
     return runner.run_with(
         {
+            CommandLineOption{std::ref(wallpaper), "wallpaper", "Colour of wallpaper [orange|purple]", "orange"},
             miral::StartupInternalClient{"wallpaper", std::ref(wallpaper)},
             set_window_management_policy<ExampleWindowManagerPolicy>()
         });

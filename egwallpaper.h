@@ -57,11 +57,15 @@ public:
     void operator()(mir::client::Connection c) { start(std::move(c)); }
     void operator()(std::weak_ptr<mir::scene::Session> const&){ }
 
+    // Used in initialization to set colour
+    void operator()(std::string const& option);
+
     void start(mir::client::Connection connection);
     void stop();
 
 private:
 
+    uint8_t colour[4] = { 0x0a, 0x24, 0x77, 0xFF };
     std::mutex mutable mutex;
     mir::client::Connection connection;
     mir::client::Window window;

@@ -32,16 +32,20 @@ using namespace mir::client;
 
 namespace
 {
-void render_pattern(MirGraphicsRegion* region, uint8_t pattern[])
+void render_gradient(MirGraphicsRegion* region, uint8_t* colour)
 {
     char* row = region->vaddr;
 
     for (int j = 0; j < region->height; j++)
     {
         auto* pixel = (uint32_t*)row;
+        uint8_t pattern_[4];
+        for (auto i = 0; i != 3; ++i)
+            pattern_[i] = (j*colour[i])/region->height;
+        pattern_[3] = colour[3];
 
         for (int i = 0; i < region->width; i++)
-            memcpy(pixel + i, pattern, sizeof pixel[i]);
+            memcpy(pixel + i, pattern_, sizeof pixel[i]);
 
         row += region->stride;
     }
@@ -96,14 +100,27 @@ void Wallpaper::create_window()
         .add_surface(surface, width, height, 0, 0)
         .create_window();
 
-    uint8_t pattern[4] = { 0x14, 0x48, 0xDD, 0xFF };
-
     MirGraphicsRegion graphics_region;
 
     mir_buffer_stream_get_graphics_region(buffer_stream, &graphics_region);
 
-    render_pattern(&graphics_region, pattern);
+    render_gradient(&graphics_region, colour);
     mir_buffer_stream_swap_buffers_sync(buffer_stream);
+}
+
+void Wallpaper::operator()(std::string const& option)
+{
+    static uint8_t const purple[4] = { 0x35, 0x00, 0x4a, 0xFF };
+    static uint8_t const orange[4] = { 0x0a, 0x24, 0x77, 0xFF };
+
+    if (option == "purple")
+    {
+        memcpy(colour, purple, 4);
+    }
+    else if (option == "orange")
+    {
+        memcpy(colour, orange, 4);
+    }
 }
 
 

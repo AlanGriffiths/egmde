@@ -38,7 +38,7 @@ void render_pattern(MirGraphicsRegion* region, uint8_t pattern[])
 
     for (int j = 0; j < region->height; j++)
     {
-        uint32_t* pixel = (uint32_t*)row;
+        auto* pixel = (uint32_t*)row;
 
         for (int i = 0; i < region->width; i++)
             memcpy(pixel + i, pattern, sizeof pixel[i]);
@@ -52,7 +52,7 @@ void Wallpaper::start(Connection connection)
 {
     {
         std::lock_guard<decltype(mutex)> lock{mutex};
-        this->connection = connection;
+        this->connection = std::move(connection);
     }
 
     enqueue_work([this]{ create_window(); });
@@ -107,9 +107,7 @@ void Wallpaper::create_window()
 }
 
 
-Worker::~Worker()
-{
-}
+Worker::~Worker() = default;
 
 void Worker::do_work()
 {

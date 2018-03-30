@@ -112,17 +112,12 @@ int main(int argc, char const* argv[])
 
 namespace
 {
-int const shift_states =
+unsigned int const shift_states =
     mir_input_event_modifier_alt |
     mir_input_event_modifier_shift |
     mir_input_event_modifier_sym |
     mir_input_event_modifier_ctrl |
     mir_input_event_modifier_meta;
-
-Width const min_width{5};
-Height const min_height{5};
-DeltaX const zero_dx{0};
-DeltaY const zero_dy{0};
 }
 
 bool ExampleWindowManagerPolicy::handle_pointer_event(MirPointerEvent const* event)
@@ -390,6 +385,8 @@ bool ExampleWindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* e
         case KEY_GRAVE:
             tools.focus_next_within_application();
             return true;
+
+        default:;
         }
     }
 

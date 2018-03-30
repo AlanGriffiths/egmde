@@ -54,7 +54,7 @@ class Wallpaper : Worker
 {
 public:
     // These operators are the protocol for an "Internal Client"
-    void operator()(mir::client::Connection c) { start(c); }
+    void operator()(mir::client::Connection c) { start(std::move(c)); }
     void operator()(std::weak_ptr<mir::scene::Session> const&){ }
 
     void start(mir::client::Connection connection);

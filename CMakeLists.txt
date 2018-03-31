@@ -10,7 +10,12 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,defs")
 include(FindPkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
 
-add_executable(egmde egmde.cpp egwallpaper.cpp egwallpaper.h)
+add_executable(egmde
+    egmde.cpp
+    egwallpaper.cpp egwallpaper.h
+    egwindowmanager.cpp egwindowmanager.h
+)
+
 target_include_directories(egmde PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
 target_link_libraries(egmde ${MIRAL_LDFLAGS})
 

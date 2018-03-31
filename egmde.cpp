@@ -16,11 +16,8 @@
  * Authored by: Alan Griffiths <alan@octopull.co.uk>
  */
 
-#include "egwallpaper.h"
 #include "egwindowmanager.h"
 
-#include <miral/command_line_option.h>
-#include <miral/internal_client.h>
 #include <miral/runner.h>
 #include <miral/set_window_management_policy.h>
 
@@ -30,14 +27,8 @@ int main(int argc, char const* argv[])
 {
     MirRunner runner{argc, argv};
 
-    Wallpaper wallpaper;
-
-    runner.add_stop_callback([&] { wallpaper.stop(); });
-
     return runner.run_with(
         {
-            CommandLineOption{std::ref(wallpaper), "wallpaper", "Colour of wallpaper RGB", "0x92006a"},
-            StartupInternalClient{"wallpaper", std::ref(wallpaper)},
             set_window_management_policy<egmde::WindowManagerPolicy>()
         });
 }

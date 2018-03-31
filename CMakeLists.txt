@@ -12,8 +12,7 @@ pkg_check_modules(MIRAL miral REQUIRED)
 
 add_executable(egmde
     egmde.cpp
-    egwallpaper.cpp egwallpaper.h
-    egwindowmanager.cpp egwindowmanager.h
+        egwindowmanager.cpp egwindowmanager.h
 )
 
 target_include_directories(egmde PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})

@@ -1,4 +1,5 @@
 #! /bin/bash
+set -e
 
 socket=${XDG_RUNTIME_DIR}/egmde_socket
 wayland_display=egmde_wayland
@@ -28,14 +29,19 @@ if [ "${bindir}" != "" ]; then bindir="${bindir}/"; fi
 if [ -e "${socket}" ]; then echo "Error: session endpoint '${socket}' already exists"; exit 1 ;fi
 if [ -e "${XDG_RUNTIME_DIR}/${wayland_display}" ]; then echo "Error: wayland endpoint '${wayland_display}' already exists"; exit 1 ;fi
 
+if ! which ${launcher} &>/dev/null
+then
+    echo "Error: Need ${launcher}"
+    echo "On Ubuntu run \"sudo apt install wayland\"";
+    echo "On Fedora run \"sudo dnf install wayland\"";
+    exit 1
+fi
+
 vt_login_session=$(who -u | grep tty${vt} | grep ${USER} | wc -l)
 if [ "${vt_login_session}" == "0" ]; then echo "Error: please log into tty${vt} first"; exit 1 ;fi
 
 oldvt=$(sudo fgconsole)
-sudo --background --preserve-env sh -c "${bindir}egmde --wayland-socket-name ${wayland_display} --vt ${vt} --arw-file --file ${socket} $*; chvt ${oldvt}"
-Make background a selectable gradient
-while [ ! -e "${socket}" ]; do echo "waiting for ${socket}"; sleep 1 ;done
-
-unset QT_QPA_PLATFORMTHEME
-MIR_SOCKET=${socket} XDG_SESSION_TYPE=mir GDK_BACKEND=wayland QT_QPA_PLATFORM=wayland SDL_VIDEODRIVER=wayland WAYLAND_DISPLAY=${wayland_display} NO_AT_BRIDGE=1 dbus-run-session -- ${launcher}
-sudo killall ${bindir}egmde
+sudo --preserve-env sh -c "${bindir}egmde --wayland-socket-name ${wayland_display} --vt ${vt} --arw-file --file ${socket} $*&\
+    while [ ! -e \"${socket}\" ]; do echo \"waiting for ${socket}\"; sleep 1 ;done;\
+    su -c \"MIR_SOCKET=${socket} XDG_SESSION_TYPE=mir GDK_BACKEND=wayland QT_QPA_PLATFORM=wayland SDL_VIDEODRIVER=wayland WAYLAND_DISPLAY=${wayland_display} NO_AT_BRIDGE=1 dbus-run-session -- ${launcher}\" $USER;\
+    killall -w ${bindir}egmde; chvt ${oldvt}"

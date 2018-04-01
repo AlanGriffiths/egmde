@@ -19,7 +19,6 @@
 #include "egwallpaper.h"
 
 #include <mir/client/display_config.h>
-#include <mir/client/surface.h>
 #include <mir/client/window_spec.h>
 
 #include <mir_toolkit/mir_buffer_stream.h>
@@ -69,9 +68,15 @@ void Wallpaper::stop()
     {
         std::lock_guard<decltype(mutex)> lock{mutex};
         window.reset();
+        surface.reset();
         connection.reset();
     }
     stop_work();
+}
+
+void Wallpaper::handle_event(MirWindow* window, MirEvent const* event, void* context)
+{
+    static_cast<Wallpaper*>(context)->handle_event(window, event);
 }
 
 void Wallpaper::create_window()
@@ -90,14 +95,14 @@ void Wallpaper::create_window()
     
     std::lock_guard<decltype(mutex)> lock{mutex};
 
-    Surface surface{mir_connection_create_render_surface_sync(connection, width, height)};
+    surface = Surface{mir_connection_create_render_surface_sync(connection, width, height)};
 
-    auto const buffer_stream =
-        mir_render_surface_get_buffer_stream(surface, width, height, mir_pixel_format_xrgb_8888);
+    buffer_stream = mir_render_surface_get_buffer_stream(surface, width, height, mir_pixel_format_xrgb_8888);
 
     window = WindowSpec::for_gloss(connection, width, height)
         .set_name("wallpaper")
         .set_fullscreen_on_output(0)
+        .set_event_handler(&handle_event, this)
         .add_surface(surface, width, height, 0, 0)
         .create_window();
 
@@ -107,6 +112,47 @@ void Wallpaper::create_window()
 
     render_gradient(&graphics_region, colour);
     mir_buffer_stream_swap_buffers_sync(buffer_stream);
+}
+
+void Wallpaper::handle_event(MirWindow* window, MirEvent const* ev)
+{
+    switch (mir_event_get_type(ev))
+    {
+        case mir_event_type_resize:
+        {
+            MirResizeEvent const* resize = mir_event_get_resize_event(ev);
+            int const new_width = mir_resize_event_get_width(resize);
+            int const new_height = mir_resize_event_get_height(resize);
+
+            enqueue_work([window, new_width, new_height, this]()
+            {
+                mir_buffer_stream_set_size(buffer_stream, new_width, new_height);
+                mir_render_surface_set_size(surface, new_width, new_height);
+
+                WindowSpec::for_changes(connection)
+                    .add_surface(surface, new_width, new_height, 0, 0)
+                    .apply_to(window);
+
+                MirGraphicsRegion graphics_region;
+
+                // We expect a buffer of the right size so we shouldn't need to limit repaints
+                // but we also to avoid an infinite loop.
+                int repaint_limit = 3;
+
+                do
+                {
+                    mir_buffer_stream_get_graphics_region(buffer_stream, &graphics_region);
+                    render_gradient(&graphics_region, colour);
+                }
+                while ((new_width != graphics_region.width || new_height != graphics_region.height)
+                       && --repaint_limit != 0);
+            });
+            break;
+        }
+
+        default:
+            break;
+    }
 }
 
 void Wallpaper::operator()(std::string const& option)

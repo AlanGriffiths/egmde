@@ -20,6 +20,7 @@
 #define EGMDE_EGWALLPAPER_H
 
 #include <mir/client/connection.h>
+#include <mir/client/surface.h>
 #include <mir/client/window.h>
 
 #include <miral/application.h>
@@ -68,9 +69,13 @@ private:
     uint8_t colour[4] = { 0x0a, 0x24, 0x77, 0xFF };
     std::mutex mutable mutex;
     mir::client::Connection connection;
+    mir::client::Surface surface;
+    MirBufferStream* buffer_stream = nullptr;
     mir::client::Window window;
 
     void create_window();
+    void handle_event(MirWindow* window, MirEvent const* ev);
+    static void handle_event(MirWindow* window, MirEvent const* event, void* context);
 };
 
 

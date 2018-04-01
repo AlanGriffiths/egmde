@@ -100,7 +100,7 @@ int main(int argc, char const* argv[])
 {
     miral::MirRunner runner{argc, argv};
 
-    Wallpaper wallpaper;
+    egmde::Wallpaper wallpaper;
 
     runner.add_stop_callback([&] { wallpaper.stop(); });
 

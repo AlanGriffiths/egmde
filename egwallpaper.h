@@ -31,6 +31,8 @@
 #include <thread>
 #include <queue>
 
+namespace egmde
+{
 class Worker
 {
 public:
@@ -77,6 +79,6 @@ private:
     void handle_event(MirWindow* window, MirEvent const* ev);
     static void handle_event(MirWindow* window, MirEvent const* event, void* context);
 };
-
+}
 
 #endif //EGMDE_EGWALLPAPER_H

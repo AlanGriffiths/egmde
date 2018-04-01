@@ -52,7 +52,7 @@ void render_gradient(MirGraphicsRegion* region, uint8_t* colour)
 }
 }
 
-void Wallpaper::start(Connection connection)
+void egmde::Wallpaper::start(Connection connection)
 {
     {
         std::lock_guard<decltype(mutex)> lock{mutex};
@@ -63,7 +63,7 @@ void Wallpaper::start(Connection connection)
     start_work();
 }
 
-void Wallpaper::stop()
+void egmde::Wallpaper::stop()
 {
     {
         std::lock_guard<decltype(mutex)> lock{mutex};
@@ -74,12 +74,12 @@ void Wallpaper::stop()
     stop_work();
 }
 
-void Wallpaper::handle_event(MirWindow* window, MirEvent const* event, void* context)
+void egmde::Wallpaper::handle_event(MirWindow* window, MirEvent const* event, void* context)
 {
     static_cast<Wallpaper*>(context)->handle_event(window, event);
 }
 
-void Wallpaper::create_window()
+void egmde::Wallpaper::create_window()
 {
     unsigned width = 0;
     unsigned height = 0;
@@ -114,7 +114,7 @@ void Wallpaper::create_window()
     mir_buffer_stream_swap_buffers_sync(buffer_stream);
 }
 
-void Wallpaper::handle_event(MirWindow* window, MirEvent const* ev)
+void egmde::Wallpaper::handle_event(MirWindow* window, MirEvent const* ev)
 {
     switch (mir_event_get_type(ev))
     {
@@ -155,7 +155,7 @@ void Wallpaper::handle_event(MirWindow* window, MirEvent const* ev)
     }
 }
 
-void Wallpaper::operator()(std::string const& option)
+void egmde::Wallpaper::operator()(std::string const& option)
 {
     uint32_t value;
     std::stringstream interpreter{option};
@@ -169,9 +169,9 @@ void Wallpaper::operator()(std::string const& option)
 }
 
 
-Worker::~Worker() = default;
+egmde::Worker::~Worker() = default;
 
-void Worker::do_work()
+void egmde::Worker::do_work()
 {
     while (!work_done)
     {
@@ -187,19 +187,19 @@ void Worker::do_work()
     }
 }
 
-void Worker::enqueue_work(std::function<void()> const& functor)
+void egmde::Worker::enqueue_work(std::function<void()> const& functor)
 {
     std::lock_guard<decltype(work_mutex)> lock{work_mutex};
     work_queue.push(functor);
     work_cv.notify_one();
 }
 
-void Worker::start_work()
+void egmde::Worker::start_work()
 {
     do_work();
 }
 
-void Worker::stop_work()
+void egmde::Worker::stop_work()
 {
     enqueue_work([this] { work_done = true; });
 }

@@ -43,5 +43,5 @@ if [ "${vt_login_session}" == "0" ]; then echo "Error: please log into tty${vt} 
 oldvt=$(sudo fgconsole)
 sudo --preserve-env sh -c "${bindir}egmde --wayland-socket-name ${wayland_display} --vt ${vt} --arw-file --file ${socket} $*&\
     while [ ! -e \"${socket}\" ]; do echo \"waiting for ${socket}\"; sleep 1 ;done;\
-    su -c \"MIR_SOCKET=${socket} XDG_SESSION_TYPE=mir GDK_BACKEND=wayland QT_QPA_PLATFORM=wayland SDL_VIDEODRIVER=wayland WAYLAND_DISPLAY=${wayland_display} NO_AT_BRIDGE=1 dbus-run-session -- ${launcher}\" $USER;\
+    su -c \"MIR_SOCKET=${socket} XDG_SESSION_TYPE=wayland GDK_BACKEND=wayland QT_QPA_PLATFORM=wayland SDL_VIDEODRIVER=wayland WAYLAND_DISPLAY=${wayland_display} NO_AT_BRIDGE=1 dbus-run-session -- ${launcher}\" $USER;\
     killall -w ${bindir}egmde; chvt ${oldvt}"

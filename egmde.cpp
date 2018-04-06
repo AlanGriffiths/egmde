@@ -21,6 +21,7 @@
 
 #include <miral/command_line_option.h>
 #include <miral/internal_client.h>
+#include <miral/keymap.h>
 #include <miral/runner.h>
 #include <miral/set_window_management_policy.h>
 
@@ -38,6 +39,7 @@ int main(int argc, char const* argv[])
         {
             CommandLineOption{std::ref(wallpaper), "wallpaper", "Colour of wallpaper RGB", "0x92006a"},
             StartupInternalClient{"wallpaper", std::ref(wallpaper)},
+            Keymap{},
             set_window_management_policy<egmde::WindowManagerPolicy>()
         });
 }

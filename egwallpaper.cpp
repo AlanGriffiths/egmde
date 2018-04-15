@@ -17,6 +17,7 @@
  */
 
 #include "egwallpaper.h"
+#include "printer.h"
 
 #include <mir/client/display_config.h>
 #include <mir/client/window_spec.h>
@@ -49,6 +50,11 @@ void render_gradient(MirGraphicsRegion* region, uint8_t* colour)
 
         row += region->stride;
     }
+
+    static egmde::Printer printer;
+
+    printer.footer(*region, "egmde . : Ctrl-Alt-L for launcher; Ctrl-Alt-BkSp to exit",
+                            "Launcher: Arrow keys to change selection; <Enter> to starts selection; <Esc> quits.");
 }
 }
 
@@ -169,37 +175,3 @@ void egmde::Wallpaper::operator()(std::string const& option)
 }
 
 
-egmde::Worker::~Worker() = default;
-
-void egmde::Worker::do_work()
-{
-    while (!work_done)
-    {
-        WorkQueue::value_type work;
-        {
-            std::unique_lock<decltype(work_mutex)> lock{work_mutex};
-            work_cv.wait(lock, [this] { return !work_queue.empty(); });
-            work = work_queue.front();
-            work_queue.pop();
-        }
-
-        work();
-    }
-}
-
-void egmde::Worker::enqueue_work(std::function<void()> const& functor)
-{
-    std::lock_guard<decltype(work_mutex)> lock{work_mutex};
-    work_queue.push(functor);
-    work_cv.notify_one();
-}
-
-void egmde::Worker::start_work()
-{
-    do_work();
-}
-
-void egmde::Worker::stop_work()
-{
-    enqueue_work([this] { work_done = true; });
-}

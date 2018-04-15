@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2018 Octopull Ltd.
+ * Copyright © 2018 Octopull Limited.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -16,48 +16,37 @@
  * Authored by: Alan Griffiths <alan@octopull.co.uk>
  */
 
-#ifndef EGMDE_EGWALLPAPER_H
-#define EGMDE_EGWALLPAPER_H
-
-#include "egworker.h"
-
-#include <mir/client/connection.h>
-#include <mir/client/surface.h>
-#include <mir/client/window.h>
+#ifndef EGMDE_LAUNCHER_H
+#define EGMDE_LAUNCHER_H
 
 #include <miral/application.h>
+#include <mir/client/connection.h>
+#include <mir/optional_value.h>
 
-#include <mutex>
+#include <memory>
 
 namespace egmde
 {
-
-class Wallpaper : Worker
+class Launcher
 {
 public:
+    Launcher();
+
     // These operators are the protocol for an "Internal Client"
     void operator()(mir::client::Connection c) { start(std::move(c)); }
     void operator()(std::weak_ptr<mir::scene::Session> const&){ }
 
-    // Used in initialization to set colour
-    void operator()(std::string const& option);
+    void set_login(mir::optional_value<std::string> const& user);
 
-    void start(mir::client::Connection connection);
+    void launch();
+
     void stop();
 
 private:
+    void start(mir::client::Connection connection);
 
-    uint8_t colour[4] = { 0x0a, 0x24, 0x77, 0xFF };
-    std::mutex mutable mutex;
-    mir::client::Connection connection;
-    mir::client::Surface surface;
-    MirBufferStream* buffer_stream = nullptr;
-    mir::client::Window window;
-
-    void create_window();
-    void handle_event(MirWindow* window, MirEvent const* ev);
-    static void handle_event(MirWindow* window, MirEvent const* event, void* context);
+    struct Self;
+    std::shared_ptr<Self> self;
 };
 }
-
-#endif //EGMDE_EGWALLPAPER_H
+#endif //EGMDE_LAUNCHER_H

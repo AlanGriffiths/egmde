@@ -77,7 +77,8 @@ int main(int argc, char const* argv[])
     return runner.run_with(
         {
             CommandLineOption{std::ref(wallpaper), "wallpaper", "Colour of wallpaper RGB", "0x92006a"},
-            CommandLineOption{[&](mir::optional_value<std::string> const& user) { launcher.set_login(user); }, "launcher-login", "When running as root, the user to launch"},
+            CommandLineOption{[&](mir::optional_value<std::string> const& user) { launcher.set_login(user); },
+                              "launcher-login", "When running as root, the user to launch"},
             StartupInternalClient{"wallpaper", std::ref(wallpaper)},
             StartupInternalClient{"launcher", std::ref(launcher)},
             Keymap{},

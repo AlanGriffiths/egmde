@@ -23,4 +23,7 @@ if [ -e "${socket}" ]; then echo "Error: session endpoint '${socket}' already ex
 if [ -e "${XDG_RUNTIME_DIR}/${wayland_display}" ]; then echo "Error: wayland endpoint '${wayland_display}' already exists"; exit 1 ;fi
 if [ ! -d "${XDG_RUNTIME_DIR}" ]; then echo "Error: XDG_RUNTIME_DIR '${XDG_RUNTIME_DIR}' does not exists"; exit 1 ;fi
 
-${bindir}egmde --wayland-socket-name ${wayland_display} --file ${socket} $*
+keymap_index=$(gsettings get org.gnome.desktop.input-sources current | cut -d\  -f 2)
+keymap=$(gsettings get org.gnome.desktop.input-sources sources | grep -Po "'[[:alpha:]]+'\)" | sed -ne "s/['|)]//g;$(($keymap_index+1))p")
+
+${bindir}egmde --wayland-socket-name ${wayland_display} --file ${socket} $* --keymap ${keymap}

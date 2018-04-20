@@ -30,6 +30,9 @@ if [ ! -d "${XDG_RUNTIME_DIR}" ]; then echo "Error: XDG_RUNTIME_DIR '${XDG_RUNTI
 vt_login_session=$(who -u | grep tty${vt} | grep ${USER} | wc -l)
 if [ "${vt_login_session}" == "0" ]; then echo "Error: please log into tty${vt} first"; exit 1 ;fi
 
+keymap_index=$(gsettings get org.gnome.desktop.input-sources current | cut -d\  -f 2)
+keymap=$(gsettings get org.gnome.desktop.input-sources sources | grep -Po "'[[:alpha:]]+'\)" | sed -ne "s/['|)]//g;$(($keymap_index+1))p")
+
 oldvt=$(sudo fgconsole)
-sudo --preserve-env sh -c "${bindir}egmde --wayland-socket-name ${wayland_display} --vt ${vt} --arw-file --file ${socket} --launcher-login ${USER}  $*;\
+sudo --preserve-env sh -c "${bindir}egmde --wayland-socket-name ${wayland_display} --vt ${vt} --arw-file --file ${socket} --launcher-login ${USER} --keymap ${keymap} $*;\
     sleep 1; chvt ${oldvt}"

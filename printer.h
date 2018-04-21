@@ -37,7 +37,7 @@ struct Printer
     Printer& operator=(Printer const&) = delete;
 
     void print(MirGraphicsRegion const& region, std::string const& title);
-    void footer(MirGraphicsRegion const& region, char const* line1, char const* line2);
+    void footer(MirGraphicsRegion const& region, std::initializer_list<char const*> const& lines);
 
 private:
     struct Codecvt : std::codecvt_byname<wchar_t, char, std::mbstate_t>

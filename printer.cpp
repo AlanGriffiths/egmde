@@ -19,6 +19,7 @@
 #include "printer.h"
 
 #include <unistd.h>
+#include <iostream>
 
 namespace
 {
@@ -118,18 +119,13 @@ void egmde::Printer::print(MirGraphicsRegion const& region, std::string const& t
     }
 }
 
-void egmde::Printer::footer(MirGraphicsRegion const& region, char const* line1, char const* line2)
+void egmde::Printer::footer(MirGraphicsRegion const& region, std::initializer_list<char const*> const& lines)
 {
-    static char const* const helptext[] =
-        {
-            line1, line2
-        };
-
     int help_width = 0;
     unsigned int help_height = 0;
     unsigned int line_height = 0;
 
-    for (auto const* rawline : helptext)
+    for (auto const* rawline : lines)
     {
         int line_width = 0;
 
@@ -156,7 +152,7 @@ void egmde::Printer::footer(MirGraphicsRegion const& region, char const* line1, 
     int base_y = (region.height - help_height);
     auto* const region_address = reinterpret_cast<char unsigned*>(region.vaddr);
 
-    for (auto const* rawline : helptext)
+    for (auto const* rawline : lines)
     {
         int base_x = (region.width - help_width)/2;
 

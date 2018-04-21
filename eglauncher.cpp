@@ -314,6 +314,8 @@ void egmde::Launcher::Self::real_launch()
             .add_surface(surface, width, height, 0, 0)
             .create_window();
 
+    stopping = false;
+
     while (!exec_currrent_app && !stopping)
     {
         std::unique_lock<decltype(mutex)> lock{mutex};
@@ -350,7 +352,6 @@ void egmde::Launcher::Self::real_launch()
         window.reset();
         buffer_stream = nullptr;
         surface.reset();
-        stopping = false;
         running = false;
         if (!exec_currrent_app)
         {

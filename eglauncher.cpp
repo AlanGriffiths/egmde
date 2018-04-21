@@ -338,6 +338,8 @@ void egmde::Launcher::Self::real_launch()
 
         static Printer printer;
         printer.print(region, current_app->title);
+        printer.footer(region,
+            {"<Enter> = start app | Arrow keys = change app | initial letter = change app | <Esc> = cancel", "", ""});
 
         mir_buffer_stream_swap_buffers_sync(buffer_stream);
         height = region.height;

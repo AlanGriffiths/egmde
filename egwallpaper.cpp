@@ -53,8 +53,7 @@ void render_gradient(MirGraphicsRegion* region, uint8_t* colour)
 
     static egmde::Printer printer;
 
-    printer.footer(*region, {"egmde . : Ctrl-Alt-L for launcher; Ctrl-Alt-BkSp to exit",
-                            "Launcher: Arrow keys to change selection; <Enter> to starts selection; <Esc> quits."});
+    printer.footer(*region, {"Ctrl-Alt-A = app launcher | Ctrl-Alt-BkSp = quit"});
 }
 }
 

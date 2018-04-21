@@ -33,7 +33,7 @@ using namespace mir::client;
 
 namespace
 {
-void render_gradient(MirGraphicsRegion* region, uint8_t* colour)
+void render_gradient(MirGraphicsRegion* region, uint8_t* bottom_colour, uint8_t* top_colour)
 {
     char* row = region->vaddr;
 
@@ -42,8 +42,8 @@ void render_gradient(MirGraphicsRegion* region, uint8_t* colour)
         auto* pixel = (uint32_t*)row;
         uint8_t pattern_[4];
         for (auto i = 0; i != 3; ++i)
-            pattern_[i] = (j*colour[i])/region->height;
-        pattern_[3] = colour[3];
+            pattern_[i] = (j*bottom_colour[i] + (region->height-j)*top_colour[i])/region->height;
+        pattern_[3] = 0xff;
 
         for (int i = 0; i < region->width; i++)
             memcpy(pixel + i, pattern_, sizeof pixel[i]);
@@ -115,7 +115,7 @@ void egmde::Wallpaper::create_window()
 
     mir_buffer_stream_get_graphics_region(buffer_stream, &graphics_region);
 
-    render_gradient(&graphics_region, colour);
+    render_gradient(&graphics_region, bottom_colour, top_colour);
     mir_buffer_stream_swap_buffers_sync(buffer_stream);
 }
 
@@ -147,7 +147,7 @@ void egmde::Wallpaper::handle_event(MirWindow* window, MirEvent const* ev)
                 do
                 {
                     mir_buffer_stream_get_graphics_region(buffer_stream, &graphics_region);
-                    render_gradient(&graphics_region, colour);
+                    render_gradient(&graphics_region, bottom_colour, top_colour);
                 }
                 while ((new_width != graphics_region.width || new_height != graphics_region.height)
                        && --repaint_limit != 0);
@@ -160,17 +160,28 @@ void egmde::Wallpaper::handle_event(MirWindow* window, MirEvent const* ev)
     }
 }
 
-void egmde::Wallpaper::operator()(std::string const& option)
+void egmde::Wallpaper::bottom(std::string const& option)
 {
     uint32_t value;
     std::stringstream interpreter{option};
 
     if (interpreter >> std::hex >> value)
     {
-        colour[0] = value & 0xff;
-        colour[1] = (value >> 8) & 0xff;
-        colour[2] = (value >> 16) & 0xff;
+        bottom_colour[0] = value & 0xff;
+        bottom_colour[1] = (value >> 8) & 0xff;
+        bottom_colour[2] = (value >> 16) & 0xff;
     }
 }
 
+void egmde::Wallpaper::top(std::string const& option)
+{
+    uint32_t value;
+    std::stringstream interpreter{option};
 
+    if (interpreter >> std::hex >> value)
+    {
+        top_colour[0] = value & 0xff;
+        top_colour[1] = (value >> 8) & 0xff;
+        top_colour[2] = (value >> 16) & 0xff;
+    }
+}

@@ -40,14 +40,16 @@ public:
     void operator()(std::weak_ptr<mir::scene::Session> const&){ }
 
     // Used in initialization to set colour
-    void operator()(std::string const& option);
+    void bottom(std::string const& option);
+    void top(std::string const& option);
 
     void start(mir::client::Connection connection);
     void stop();
 
 private:
 
-    uint8_t colour[4] = { 0x0a, 0x24, 0x77, 0xFF };
+    uint8_t bottom_colour[4] = { 0x0a, 0x24, 0x77, 0xFF };
+    uint8_t top_colour[4] = { 0x00, 0x00, 0x00, 0xFF };
     std::mutex mutable mutex;
     mir::client::Connection connection;
     mir::client::Surface surface;

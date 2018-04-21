@@ -131,7 +131,7 @@ void egmde::Printer::footer(MirGraphicsRegion const& region, std::initializer_li
 
         auto const line = converter.from_bytes(rawline);
 
-        auto const fwidth = std::min(region.width / 60, 20);
+        auto const fwidth = region.width / 60;
 
         FT_Set_Pixel_Sizes(face, fwidth, 0);
 

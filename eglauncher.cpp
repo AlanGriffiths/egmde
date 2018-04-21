@@ -238,6 +238,7 @@ private:
     std::condition_variable mutable cv;
     std::vector<app_details>::const_iterator current_app{apps.begin()};
     bool exec_currrent_app{false};
+    bool running{false};
     bool stopping{false};
 };
 
@@ -281,6 +282,14 @@ void egmde::Launcher::Self::start(mir::client::Connection connection_)
 
 void egmde::Launcher::Self::launch()
 {
+    {
+        std::lock_guard<decltype(mutex)> lock{mutex};
+        if (running)
+            return;
+
+        running = true;
+    }
+
     enqueue_work(std::bind(&Self::real_launch, this));
 }
 
@@ -342,7 +351,7 @@ void egmde::Launcher::Self::real_launch()
         buffer_stream = nullptr;
         surface.reset();
         stopping = false;
-
+        running = false;
         if (!exec_currrent_app)
         {
             return;
@@ -446,6 +455,7 @@ void egmde::Launcher::Self::window_event_callback(MirWindow* /*window*/, MirEven
             auto const self = (Self*)context;
             std::lock_guard<decltype(self->mutex)> lock{self->mutex};
             self->stopping = true;
+            self->running = false;
             self->cv.notify_one();
         }
         break;

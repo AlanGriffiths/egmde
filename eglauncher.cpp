@@ -366,12 +366,16 @@ void egmde::Launcher::Self::real_launch()
     if (!fork())
     {
         // TODO don't hard code MIR_SOCKET & WAYLAND_DISPLAY value
-        setenv("MIR_SOCKET", "/run/user/1000/egmde_socket", 1);
+        // The Mir 0.31 API is lacking a good way to do this, but I hope to fix this for Mir 0.32
+        std::string mir_socket{getenv("XDG_RUNTIME_DIR")};
+        mir_socket += "/egmde_socket";
+        setenv("MIR_SOCKET", mir_socket.c_str(), 1);
         setenv("WAYLAND_DISPLAY", "egmde_wayland", 1);
         setenv("GDK_BACKEND", "wayland", 1);
         setenv("QT_QPA_PLATFORM", "wayland", 1);
         setenv("SDL_VIDEODRIVER", "wayland", 1);
         setenv("NO_AT_BRIDGE", "1", 1);
+        unsetenv("DISPLAY");
 
         auto app = current_app->exec;
         auto ws = app.find(' ');

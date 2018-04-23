@@ -20,6 +20,12 @@
 #define EGMDE_LAUNCHER_H
 
 #include <miral/application.h>
+#include <miral/version.h>
+
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 2, 0)
+#include <miral/external_client.h>
+#endif
+
 #include <mir/client/connection.h>
 #include <mir/optional_value.h>
 
@@ -30,7 +36,11 @@ namespace egmde
 class Launcher
 {
 public:
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 2, 0)
+    Launcher(miral::ExternalClientLauncher& external_client_launcher);
+#else
     Launcher();
+#endif
 
     // These operators are the protocol for an "Internal Client"
     void operator()(mir::client::Connection c) { start(std::move(c)); }

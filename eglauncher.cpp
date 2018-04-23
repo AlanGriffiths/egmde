@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016 Octopull Limited.
+ * Copyright © 2016-2018 Octopull Limited.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -204,6 +204,9 @@ auto list_desktop_files() -> file_list
 class egmde::Launcher::Self : public Worker
 {
 public:
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 2, 0)
+    Self(miral::ExternalClientLauncher& external_client_launcher) : external_client_launcher{external_client_launcher} {}
+#endif
     void start(mir::client::Connection connection);
 
     void launch();
@@ -224,6 +227,9 @@ private:
     void next_app();
     void run_app();
 
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 2, 0)
+    miral::ExternalClientLauncher& external_client_launcher;
+#endif
     mc::Connection connection;
     mc::Surface surface;
     MirBufferStream* buffer_stream{nullptr};
@@ -242,7 +248,13 @@ private:
     bool stopping{false};
 };
 
-egmde::Launcher::Launcher() : self{std::make_shared<Self>()}
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 2, 0)
+egmde::Launcher::Launcher(miral::ExternalClientLauncher& external_client_launcher) :
+    self{std::make_shared<Self>(external_client_launcher)}
+#else
+egmde::Launcher::Launcher() :
+    self{std::make_shared<Self>()}
+#endif
 {
 }
 
@@ -362,7 +374,36 @@ void egmde::Launcher::Self::real_launch()
         exec_currrent_app = false;
     }
 
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 2, 0)
+    setenv("NO_AT_BRIDGE", "1", 1);
+    unsetenv("DISPLAY");
 
+    auto app = current_app->exec;
+    auto ws = app.find(' ');
+    if (ws != std::string::npos)
+        app.erase(ws);
+
+    if (login.is_set())
+    {
+        if (app == "gnome-terminal")
+            app +=  " --app-id uk.co.octopull.egmde.Terminal";
+
+        char const* exec_args[] = {
+            "su",
+            "--preserve-environment",
+            "--command",
+            nullptr,
+            login.value().c_str()};
+
+        exec_args[3] = app.c_str();
+
+        external_client_launcher.launch({std::begin(exec_args), std::end(exec_args)});
+    }
+    else
+    {
+        external_client_launcher.launch({app});
+    }
+#else
     if (!fork())
     {
         // TODO don't hard code MIR_SOCKET & WAYLAND_DISPLAY value
@@ -412,6 +453,7 @@ void egmde::Launcher::Self::real_launch()
             execvp(exec_args[0], const_cast<char*const*>(exec_args));
         }
     }
+#endif
 }
 
 

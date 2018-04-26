@@ -48,7 +48,7 @@ public:
 
     void set_login(mir::optional_value<std::string> const& user);
 
-    void launch();
+    void show();
 
     void stop();
 

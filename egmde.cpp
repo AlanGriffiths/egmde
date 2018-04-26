@@ -63,8 +63,7 @@ int main(int argc, char const* argv[])
 
             switch (mir_keyboard_event_scan_code(kev))
             {
-            case KEY_A:
-                launcher.launch();
+            case KEY_A:launcher.show();
                 return true;
 
             case KEY_BACKSPACE:

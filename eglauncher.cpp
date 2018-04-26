@@ -268,7 +268,7 @@ void egmde::Launcher::stop()
     self->stop();
 }
 
-void egmde::Launcher::launch()
+void egmde::Launcher::show()
 {
     self->launch();
 }

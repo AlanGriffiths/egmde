@@ -148,6 +148,7 @@ void egmde::Wallpaper::handle_event(MirWindow* window, MirEvent const* ev)
                 {
                     mir_buffer_stream_get_graphics_region(buffer_stream, &graphics_region);
                     render_gradient(&graphics_region, bottom_colour, top_colour);
+                    mir_buffer_stream_swap_buffers_sync(buffer_stream);
                 }
                 while ((new_width != graphics_region.width || new_height != graphics_region.height)
                        && --repaint_limit != 0);

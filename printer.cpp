@@ -45,7 +45,7 @@ auto default_font() -> char const*
 
 egmde::Printer::Printer()
 {
-    static char const* font_file = getenv("MIRCADE_FONT");
+    static char const* font_file = getenv("EGMDE_FONT");
 
     if (!font_file) font_file = default_font();
 

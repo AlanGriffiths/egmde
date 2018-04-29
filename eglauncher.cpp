@@ -48,6 +48,7 @@
 #include <thread>
 
 #include <vector>
+#include <mir/geometry/size.h>
 
 namespace mc = mir::client;
 
@@ -222,7 +223,7 @@ private:
     void handle_touch(MirTouchEvent const* event);
     void resize(int new_width, int new_height);
     void real_launch();
-    void real_resize(int new_width, int new_height);
+
     void prev_app();
     void next_app();
     void run_app();
@@ -246,6 +247,7 @@ private:
     bool exec_currrent_app{false};
     bool running{false};
     bool stopping{false};
+    mir::optional_value<mir::geometry::Size> resize_;
 };
 
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 2, 0)
@@ -332,6 +334,16 @@ void egmde::Launcher::Self::real_launch()
     {
         std::unique_lock<decltype(mutex)> lock{mutex};
 
+        if (resize_)
+        {
+            auto const& size = resize_.value();
+            mir_render_surface_set_size(surface, size.width.as_uint32_t(), size.height.as_uint32_t());
+            mir_buffer_stream_set_size(buffer_stream, size.width.as_uint32_t(), size.height.as_uint32_t());
+            mc::WindowSpec::for_changes(connection)
+                .add_surface(surface, size.width.as_uint32_t(), size.height.as_uint32_t(), 0, 0)
+                .apply_to(window);
+        }
+
         static uint8_t const pattern[4] = { 0x1f, 0x1f, 0x1f, 0xaf };
 
         MirGraphicsRegion region;
@@ -355,6 +367,16 @@ void egmde::Launcher::Self::real_launch()
 
         mir_buffer_stream_swap_buffers_sync(buffer_stream);
         height = region.height;
+        width = region.width;
+
+        if (resize_)
+        {
+            auto const& size = resize_.value();
+            if (width == size.width.as_uint32_t() && height == size.height.as_uint32_t())
+                resize_.consume();
+            else
+                continue;
+        }
 
         cv.wait(lock);
     }
@@ -523,16 +545,7 @@ void egmde::Launcher::Self::window_event_callback(MirWindow* /*window*/, MirEven
 
 void egmde::Launcher::Self::resize(int new_width, int new_height)
 {
-    enqueue_work(std::bind(&Self::real_resize, this, new_width, new_height));
-}
-
-void egmde::Launcher::Self::real_resize(int new_width, int new_height)
-{
-    mir_render_surface_set_size(surface, new_width, new_height);
-    mir_buffer_stream_set_size(buffer_stream, new_width, new_height);
-    mc::WindowSpec::for_changes(connection)
-        .add_surface(surface, new_width, new_height, 0, 0)
-        .apply_to(window);
+    resize_ = mir::geometry::Size{new_width, new_height};
 }
 
 void egmde::Launcher::Self::handle_input(MirInputEvent const* event)

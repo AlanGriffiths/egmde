@@ -32,6 +32,10 @@ add_custom_target(egmde-app ALL
     cp ${CMAKE_CURRENT_SOURCE_DIR}/egmde-app.sh ${CMAKE_BINARY_DIR}/egmde-app
 )
 
-install(PROGRAMS ${CMAKE_BINARY_DIR}/egmde-desktop ${CMAKE_BINARY_DIR}/egmde-app
+install(PROGRAMS ${CMAKE_BINARY_DIR}/egmde-desktop ${CMAKE_BINARY_DIR}/egmde-app ${CMAKE_BINARY_DIR}/egmde
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
+install(FILES ${CMAKE_SOURCE_DIR}/egmde.desktop
+    DESTINATION /usr/share/wayland-sessions/
 )

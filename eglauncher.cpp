@@ -152,9 +152,13 @@ auto load_details() -> std::vector<app_details>
         }
 
         auto app = exec;
-        auto ws = app.find(' ');
+        auto ws = app.find('%');
         if (ws != std::string::npos)
-            app.erase(ws);
+        {
+            // TODO handle exec variables:
+            // https://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables
+            continue; // For now ignore .desktop files that use them
+        }
 
         auto sl = app.rfind('/');
         if (sl != std::string::npos)
@@ -193,7 +197,7 @@ auto load_details() -> std::vector<app_details>
 
 auto list_desktop_files() -> file_list
 {
-    std::string search_path{"~/.local/share/applications:/usr/share/applications"};
+    std::string search_path{"~/.local/share/applications:/usr/share/applications:/var/lib/snapd/desktop/applications"};
     // search_paths relies on a ":" sentinal value
     search_path +=  ":";
     auto const paths = search_paths(search_path.c_str());

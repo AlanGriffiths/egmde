@@ -205,14 +205,12 @@ auto list_desktop_files() -> file_list
 class egmde::Launcher::Self : public Worker
 {
 public:
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 2, 0)
     Self(miral::ExternalClientLauncher& external_client_launcher) : external_client_launcher{external_client_launcher} {}
-#endif
+
     void start(mir::client::Connection connection);
 
     void launch();
     void stop();
-    void set_login(mir::optional_value<std::string> const& user);
 
 private:
     static void lifecycle_event_callback(MirConnection* /*connection*/, MirLifecycleState state, void* context);
@@ -228,16 +226,14 @@ private:
     void next_app();
     void run_app();
 
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 2, 0)
     miral::ExternalClientLauncher& external_client_launcher;
-#endif
+
     mc::Connection connection;
     mc::Surface surface;
     MirBufferStream* buffer_stream{nullptr};
     mc::Window window;
     unsigned width = 0;
     unsigned height = 0;
-    mir::optional_value<std::string> login;
 
     std::vector<app_details> const apps = load_details();
 
@@ -250,13 +246,8 @@ private:
     mir::optional_value<mir::geometry::Size> resize_;
 };
 
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 2, 0)
 egmde::Launcher::Launcher(miral::ExternalClientLauncher& external_client_launcher) :
     self{std::make_shared<Self>(external_client_launcher)}
-#else
-egmde::Launcher::Launcher() :
-    self{std::make_shared<Self>()}
-#endif
 {
 }
 
@@ -273,11 +264,6 @@ void egmde::Launcher::stop()
 void egmde::Launcher::show()
 {
     self->launch();
-}
-
-void egmde::Launcher::set_login(mir::optional_value<std::string> const& user)
-{
-    self->set_login(user);
 }
 
 void egmde::Launcher::Self::start(mir::client::Connection connection_)
@@ -396,7 +382,6 @@ void egmde::Launcher::Self::real_launch()
         exec_currrent_app = false;
     }
 
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 2, 0)
     setenv("NO_AT_BRIDGE", "1", 1);
     unsetenv("DISPLAY");
 
@@ -405,77 +390,7 @@ void egmde::Launcher::Self::real_launch()
     if (ws != std::string::npos)
         app.erase(ws);
 
-    if (login.is_set())
-    {
-        if (app == "gnome-terminal")
-            app +=  " --app-id uk.co.octopull.egmde.Terminal";
-
-        char const* exec_args[] = {
-            "su",
-            "--preserve-environment",
-            "--command",
-            nullptr,
-            login.value().c_str()};
-
-        exec_args[3] = app.c_str();
-
-        external_client_launcher.launch({std::begin(exec_args), std::end(exec_args)});
-    }
-    else
-    {
-        external_client_launcher.launch({app});
-    }
-#else
-    if (!fork())
-    {
-        // TODO don't hard code MIR_SOCKET & WAYLAND_DISPLAY value
-        // The Mir 0.31 API is lacking a good way to do this, but I hope to fix this for Mir 0.32
-        std::string mir_socket{getenv("XDG_RUNTIME_DIR")};
-        mir_socket += "/egmde_socket";
-        setenv("MIR_SOCKET", mir_socket.c_str(), 1);
-        setenv("WAYLAND_DISPLAY", "egmde_wayland", 1);
-        setenv("GDK_BACKEND", "wayland", 1);
-        setenv("QT_QPA_PLATFORM", "wayland", 1);
-        setenv("SDL_VIDEODRIVER", "wayland", 1);
-        setenv("NO_AT_BRIDGE", "1", 1);
-        unsetenv("DISPLAY");
-
-        auto app = current_app->exec;
-        auto ws = app.find(' ');
-        if (ws != std::string::npos)
-            app.erase(ws);
-
-        if (login.is_set())
-        {
-            if (app == "gnome-terminal")
-                app +=  " --app-id uk.co.octopull.egmde.Terminal";
-
-            char const* exec_args[] = {
-                "su",
-                "--preserve-environment",
-                "--command",
-                nullptr,
-                login.value().c_str(),
-                nullptr };
-
-            exec_args[3] = app.c_str();
-
-            execvp(exec_args[0], const_cast<char*const*>(exec_args));
-        }
-        else
-        {
-            char const* exec_args[] = { "gnome-terminal", "--app-id", "uk.co.octopull.egmde.Terminal", nullptr };
-
-            if (app != exec_args[0])
-            {
-                exec_args[0] = app.c_str();
-                exec_args[1] = nullptr;
-            }
-
-            execvp(exec_args[0], const_cast<char*const*>(exec_args));
-        }
-    }
-#endif
+    external_client_launcher.launch({app});
 }
 
 
@@ -701,9 +616,4 @@ void egmde::Launcher::Self::stop()
         cv.notify_one();
     }
     stop_work();
-}
-
-void egmde::Launcher::Self::set_login(mir::optional_value<std::string> const& user)
-{
-    this->login = user;
 }

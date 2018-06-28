@@ -34,5 +34,5 @@ keymap_index=$(gsettings get org.gnome.desktop.input-sources current | cut -d\  
 keymap=$(gsettings get org.gnome.desktop.input-sources sources | grep -Po "'[[:alpha:]]+'\)" | sed -ne "s/['|)]//g;$(($keymap_index+1))p")
 
 oldvt=$(sudo fgconsole)
-sudo --preserve-env sh -c "${bindir}egmde --wayland-socket-name ${wayland_display} --vt ${vt} --arw-file --file ${socket} --launcher-login ${USER} --keymap ${keymap} $*;\
+sudo --preserve-env sh -c "chvt ${vt}; su -c '${bindir}egmde --wayland-socket-name ${wayland_display} --arw-file --file ${socket} --keymap ${keymap} $*' ${USER};\
     sleep 1; chvt ${oldvt}"

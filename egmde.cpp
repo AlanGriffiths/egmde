@@ -37,12 +37,8 @@ int main(int argc, char const* argv[])
 
     egmde::Wallpaper wallpaper;
 
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 2, 0)
     ExternalClientLauncher external_client_launcher;
     egmde::Launcher launcher{external_client_launcher};
-#else
-    egmde::Launcher launcher;
-#endif
 
     auto const keyboard_shortcuts = [&](MirEvent const* event)
         {
@@ -85,12 +81,8 @@ int main(int argc, char const* argv[])
                               "wallpaper-top",    "Colour of wallpaper RGB", "0x000000"},
             CommandLineOption{[&](auto& option) { wallpaper.bottom(option);},
                               "wallpaper-bottom", "Colour of wallpaper RGB", "0x92006a"},
-            CommandLineOption{[&](mir::optional_value<std::string> const& user) { launcher.set_login(user); },
-                              "launcher-login", "When running as root, the user to launch"},
             StartupInternalClient{"wallpaper", std::ref(wallpaper)},
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 2, 0)
             external_client_launcher,
-#endif
             StartupInternalClient{"launcher", std::ref(launcher)},
             Keymap{},
             AppendEventFilter{keyboard_shortcuts},

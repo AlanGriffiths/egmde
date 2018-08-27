@@ -64,7 +64,7 @@ void egmde::Wallpaper::start(Connection connection)
         this->connection = std::move(connection);
     }
 
-    enqueue_work([this]{ create_window(); });
+    enqueue_work([this]{ create_windows(); });
     start_work();
 }
 
@@ -72,8 +72,8 @@ void egmde::Wallpaper::stop()
 {
     {
         std::lock_guard<decltype(mutex)> lock{mutex};
-        window.reset();
-        surface.reset();
+
+        windows.clear();
         connection.reset();
     }
     stop_work();
@@ -84,39 +84,39 @@ void egmde::Wallpaper::handle_event(MirWindow* window, MirEvent const* event, vo
     static_cast<Wallpaper*>(context)->handle_event(window, event);
 }
 
-void egmde::Wallpaper::create_window()
+void egmde::Wallpaper::create_windows()
 {
-    unsigned width = 0;
-    unsigned height = 0;
-
-    DisplayConfig{connection}.for_each_output([&width, &height](MirOutput const* output)
+    DisplayConfig{connection}.for_each_output([this](MirOutput const* output)
     {
         if (!mir_output_is_enabled(output))
             return;
 
-         width = std::max(width, mir_output_get_logical_width(output));
-         height = std::max(height, mir_output_get_logical_height(output));
+        auto const id = mir_output_get_id(output);
+        auto const width = mir_output_get_logical_width(output);
+        auto const height = mir_output_get_logical_height(output);
+
+        std::lock_guard<decltype(mutex)> lock{mutex};
+
+        Surface surface{mir_connection_create_render_surface_sync(connection, width, height)};
+
+        auto buffer_stream = mir_render_surface_get_buffer_stream(surface, width, height, mir_pixel_format_xrgb_8888);
+
+        auto window = WindowSpec::for_gloss(connection, width, height)
+          .set_name("wallpaper")
+          .set_fullscreen_on_output(id)
+          .set_event_handler(&handle_event, this)
+          .add_surface(surface, width, height, 0, 0)
+          .create_window();
+
+        MirGraphicsRegion graphics_region;
+
+        mir_buffer_stream_get_graphics_region(buffer_stream, &graphics_region);
+
+        render_gradient(&graphics_region, bottom_colour, top_colour);
+        mir_buffer_stream_swap_buffers_sync(buffer_stream);
+
+        windows.push_back({surface, buffer_stream, window});
     });
-    
-    std::lock_guard<decltype(mutex)> lock{mutex};
-
-    surface = Surface{mir_connection_create_render_surface_sync(connection, width, height)};
-
-    buffer_stream = mir_render_surface_get_buffer_stream(surface, width, height, mir_pixel_format_xrgb_8888);
-
-    window = WindowSpec::for_gloss(connection, width, height)
-        .set_name("wallpaper")
-        .set_fullscreen_on_output(0)
-        .set_event_handler(&handle_event, this)
-        .add_surface(surface, width, height, 0, 0)
-        .create_window();
-
-    MirGraphicsRegion graphics_region;
-
-    mir_buffer_stream_get_graphics_region(buffer_stream, &graphics_region);
-
-    render_gradient(&graphics_region, bottom_colour, top_colour);
-    mir_buffer_stream_swap_buffers_sync(buffer_stream);
 }
 
 void egmde::Wallpaper::handle_event(MirWindow* window, MirEvent const* ev)
@@ -131,27 +131,33 @@ void egmde::Wallpaper::handle_event(MirWindow* window, MirEvent const* ev)
 
             enqueue_work([window, new_width, new_height, this]()
             {
-                mir_buffer_stream_set_size(buffer_stream, new_width, new_height);
-                mir_render_surface_set_size(surface, new_width, new_height);
-
-                WindowSpec::for_changes(connection)
-                    .add_surface(surface, new_width, new_height, 0, 0)
-                    .apply_to(window);
-
-                MirGraphicsRegion graphics_region;
-
-                // We expect a buffer of the right size so we shouldn't need to limit repaints
-                // but we also to avoid an infinite loop.
-                int repaint_limit = 3;
-
-                do
+                for (auto& w : windows)
                 {
-                    mir_buffer_stream_get_graphics_region(buffer_stream, &graphics_region);
-                    render_gradient(&graphics_region, bottom_colour, top_colour);
-                    mir_buffer_stream_swap_buffers_sync(buffer_stream);
-                }
-                while ((new_width != graphics_region.width || new_height != graphics_region.height)
-                       && --repaint_limit != 0);
+                    if (w.window != window)
+                        continue;
+
+                    mir_buffer_stream_set_size(w.buffer_stream, new_width, new_height);
+                    mir_render_surface_set_size(w.surface, new_width, new_height);
+
+                    WindowSpec::for_changes(connection)
+                        .add_surface(w.surface, new_width, new_height, 0, 0)
+                        .apply_to(window);
+
+                    MirGraphicsRegion graphics_region;
+
+                    // We expect a buffer of the right size so we shouldn't need to limit repaints
+                    // but we also to avoid an infinite loop.
+                    int repaint_limit = 3;
+
+                    do
+                    {
+                        mir_buffer_stream_get_graphics_region(w.buffer_stream, &graphics_region);
+                        render_gradient(&graphics_region, bottom_colour, top_colour);
+                        mir_buffer_stream_swap_buffers_sync(w.buffer_stream);
+                    }
+                    while ((new_width != graphics_region.width || new_height != graphics_region.height)
+                           && --repaint_limit != 0);
+                    }
             });
             break;
         }

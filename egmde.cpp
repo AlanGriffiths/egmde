@@ -22,6 +22,7 @@
 
 #include <miral/append_event_filter.h>
 #include <miral/command_line_option.h>
+#include <miral/display_configuration_option.h>
 #include <miral/internal_client.h>
 #include <miral/keymap.h>
 #include <miral/runner.h>
@@ -94,6 +95,7 @@ int main(int argc, char const* argv[])
             StartupInternalClient{"launcher", std::ref(launcher)},
             Keymap{},
             AppendEventFilter{keyboard_shortcuts},
-            set_window_management_policy<egmde::WindowManagerPolicy>()
+            set_window_management_policy<egmde::WindowManagerPolicy>(),
+            display_configuration_options
         });
 }

@@ -28,6 +28,7 @@
 #include <miral/application.h>
 
 #include <mutex>
+#include <vector>
 
 namespace egmde
 {
@@ -52,11 +53,17 @@ private:
     uint8_t top_colour[4] = { 0x00, 0x00, 0x00, 0xFF };
     std::mutex mutable mutex;
     mir::client::Connection connection;
-    mir::client::Surface surface;
-    MirBufferStream* buffer_stream = nullptr;
-    mir::client::Window window;
 
-    void create_window();
+    struct Window
+    {
+        mir::client::Surface surface;
+        MirBufferStream* buffer_stream = nullptr;
+        mir::client::Window window;
+    };
+
+    std::vector<Window> windows;
+
+    void create_windows();
     void handle_event(MirWindow* window, MirEvent const* ev);
     static void handle_event(MirWindow* window, MirEvent const* event, void* context);
 };

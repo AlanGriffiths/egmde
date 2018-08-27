@@ -28,6 +28,7 @@
 #include <miral/runner.h>
 #include <miral/set_window_management_policy.h>
 #include <miral/version.h>
+#include <miral/wayland_extensions.h>
 
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 4, 0)
 #include <miral/x11_support.h>
@@ -85,6 +86,7 @@ int main(int argc, char const* argv[])
         {
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 4, 0)
             X11Support{},
+            WaylandExtensions{},
 #endif
             CommandLineOption{[&](auto& option) { wallpaper.top(option);},
                               "wallpaper-top",    "Colour of wallpaper RGB", "0x000000"},

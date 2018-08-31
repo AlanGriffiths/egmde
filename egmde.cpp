@@ -32,6 +32,7 @@
 
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 4, 0)
 #include <miral/x11_support.h>
+#include <miral/display_configuration.h>
 #endif
 
 #include <linux/input.h>
@@ -87,6 +88,7 @@ int main(int argc, char const* argv[])
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 4, 0)
             X11Support{},
             WaylandExtensions{},
+            DisplayConfiguration{runner},
 #endif
             CommandLineOption{[&](auto& option) { wallpaper.top(option);},
                               "wallpaper-top",    "Colour of wallpaper RGB", "0x000000"},
@@ -97,7 +99,6 @@ int main(int argc, char const* argv[])
             StartupInternalClient{"launcher", std::ref(launcher)},
             Keymap{},
             AppendEventFilter{keyboard_shortcuts},
-            set_window_management_policy<egmde::WindowManagerPolicy>(),
-            display_configuration_options
+            set_window_management_policy<egmde::WindowManagerPolicy>()
         });
 }

@@ -79,6 +79,38 @@ int main(int argc, char const* argv[])
             }
         };
 
+    auto touch_shortcuts = [&, gesture = false](MirEvent const* event) mutable
+    {
+            if (mir_event_get_type(event) != mir_event_type_input)
+                return false;
+
+            auto const* input_event = mir_event_get_input_event(event);
+            if (mir_input_event_get_type(input_event) != mir_input_event_type_touch)
+                return false;
+
+            auto const* tev = mir_input_event_get_touch_event(input_event);
+
+            if (gesture)
+            {
+                if (mir_touch_event_action(tev, 0) == mir_touch_action_up)
+                    gesture = false;
+                return true;
+            }
+
+            if (mir_touch_event_point_count(tev) != 1)
+                return false;
+
+            if (mir_touch_event_action(tev, 0) != mir_touch_action_down)
+                return false;
+
+            if (mir_touch_event_axis_value(tev, 0, mir_touch_axis_x) >= 5)
+                return false;
+
+            launcher.show();
+            gesture = true;
+            return true;
+        };
+
 
     runner.add_stop_callback([&] { wallpaper.stop(); });
     runner.add_stop_callback([&] { launcher.stop(); });
@@ -99,6 +131,7 @@ int main(int argc, char const* argv[])
             StartupInternalClient{"launcher", std::ref(launcher)},
             Keymap{},
             AppendEventFilter{keyboard_shortcuts},
+            AppendEventFilter{touch_shortcuts},
             set_window_management_policy<egmde::WindowManagerPolicy>()
         });
 }

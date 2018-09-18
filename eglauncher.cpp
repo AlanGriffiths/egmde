@@ -576,6 +576,14 @@ void egmde::Launcher::Self::handle_touch(MirTouchEvent const* event)
 
     if (count == 1 && mir_touch_event_action(event, 0) == mir_touch_action_up)
     {
+        if (mir_touch_event_axis_value(event, 0, mir_touch_axis_x) < 5)
+        {
+            std::lock_guard<decltype(mutex)> lock{mutex};
+            stopping = true;
+            cv.notify_one();
+            return;
+        }
+
         auto const y = mir_touch_event_axis_value(event, 0, mir_touch_axis_y);
 
         std::lock_guard<decltype(mutex)> lock{mutex};

@@ -12,6 +12,7 @@ basis for your own project or to offer suggestions via pull requests.
 2. [Egmde: keymap and wallpaper](https://community.ubuntu.com/t/egmde-keymap-and-wallpaper)
 3. [Egmde: integrating a launcher](https://community.ubuntu.com/t/egmde-integrating-a-launcher/)
 4. [Egmde: desktop session](https://community.ubuntu.com/t/egmde-desktop-session/)
+5. [Egmde: A touch of touch support](https://community.ubuntu.com/t/egmde-a-touch-of-touch-support/)
 
 ## egmde snap
 

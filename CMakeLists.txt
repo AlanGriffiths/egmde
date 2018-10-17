@@ -21,6 +21,23 @@ add_executable(egmde
     printer.cpp printer.h
 )
 
+execute_process(
+    COMMAND grep ^NAME= /etc/os-release 
+    COMMAND cut -d= -f2
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    OUTPUT_VARIABLE EGMDE_OS)
+
+
+if (EGMDE_OS STREQUAL "Ubuntu")
+  set(EGMDE_WALLPAPER_BOTTOM 0x92006a)
+elseif (EGMDE_OS STREQUAL "Fedora")
+  set(EGMDE_WALLPAPER_BOTTOM 0x25487c)
+else()
+  set(EGMDE_WALLPAPER_BOTTOM 0x92006a)
+endif()
+
+set_source_files_properties(egmde.cpp PROPERTIES COMPILE_DEFINITIONS EGMDE_WALLPAPER_BOTTOM="${EGMDE_WALLPAPER_BOTTOM}")
+
 target_include_directories(egmde PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
 target_link_libraries(     egmde               ${MIRAL_LDFLAGS}      ${Boost_LIBRARIES}    ${FREETYPE_LIBRARIES})
 

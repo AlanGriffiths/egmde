@@ -198,6 +198,8 @@ auto load_details() -> std::vector<app_details>
 auto list_desktop_files() -> file_list
 {
     std::string search_path{"~/.local/share/applications:/usr/share/applications:/var/lib/snapd/desktop/applications"};
+    if (char const* snap_path = getenv("SNAP"))
+        search_path += ":" + std::string{snap_path} + "/usr/share/applications";
     // search_paths relies on a ":" sentinal value
     search_path +=  ":";
     auto const paths = search_paths(search_path.c_str());

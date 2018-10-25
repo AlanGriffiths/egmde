@@ -75,6 +75,7 @@ auto scan_for_desktop_files(std::vector<boost::filesystem::path> const& paths) -
     for (auto const& path : paths)
     {
         if (is_directory(path))
+        try
         {
             for (boost::filesystem::directory_iterator i(path), end; i != end; ++i)
             {
@@ -84,6 +85,7 @@ auto scan_for_desktop_files(std::vector<boost::filesystem::path> const& paths) -
                 }
             }
         }
+        catch (std::exception const&){}
     }
 
     return list;

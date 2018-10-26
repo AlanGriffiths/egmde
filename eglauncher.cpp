@@ -159,7 +159,7 @@ auto load_details() -> std::vector<app_details>
         {
             // TODO handle exec variables:
             // https://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables
-            continue; // For now ignore .desktop files that use them
+            app = app.substr(0, ws);    // For now ignore the rest of the Exec value
         }
 
         auto sl = app.rfind('/');

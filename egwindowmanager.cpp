@@ -172,6 +172,16 @@ bool egmde::WindowManagerPolicy::handle_touch_event(MirTouchEvent const* event)
 {
     auto const count = mir_touch_event_point_count(event);
 
+    if (count == 1)
+    {
+        if (mir_touch_event_action(event, 0) == mir_touch_action_down &&
+            mir_touch_event_axis_value(event, 0, mir_touch_axis_x) < tools.active_output().right().as_int())
+        {
+            tools.focus_next_application();
+            return true;
+        }
+    }
+
     long total_x = 0;
     long total_y = 0;
 

@@ -80,7 +80,7 @@ int main(int argc, char const* argv[])
         };
 
     auto touch_shortcuts = [&, gesture = false](MirEvent const* event) mutable
-    {
+        {
             if (mir_event_get_type(event) != mir_event_type_input)
                 return false;
 

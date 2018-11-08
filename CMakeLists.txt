@@ -41,11 +41,11 @@ set_source_files_properties(egmde.cpp PROPERTIES COMPILE_DEFINITIONS EGMDE_WALLP
 target_include_directories(egmde PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
 target_link_libraries(     egmde               ${MIRAL_LDFLAGS}      ${Boost_LIBRARIES}    ${FREETYPE_LIBRARIES})
 
-add_custom_target(egmde-app ALL
-    cp ${CMAKE_CURRENT_SOURCE_DIR}/egmde-app.sh ${CMAKE_BINARY_DIR}/egmde-app
+add_custom_target(egmde-launch ALL
+    cp ${CMAKE_CURRENT_SOURCE_DIR}/egmde-launch.sh ${CMAKE_BINARY_DIR}/egmde-launch
 )
 
-install(PROGRAMS ${CMAKE_BINARY_DIR}/egmde-desktop ${CMAKE_BINARY_DIR}/egmde-app ${CMAKE_BINARY_DIR}/egmde
+install(PROGRAMS ${CMAKE_BINARY_DIR}/egmde-launch ${CMAKE_BINARY_DIR}/egmde
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
 

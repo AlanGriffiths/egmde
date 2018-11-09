@@ -397,7 +397,33 @@ void egmde::Launcher::Self::real_launch()
     if (ws != std::string::npos)
         app.erase(ws);
 
-    external_client_launcher.launch({app});
+    static char const* launch_prefix = getenv("EGMDE_LAUNCH_PREFIX");
+
+    std::vector<std::string> command;
+
+    char const* start = nullptr;
+    char const* end = nullptr;
+
+    if (launch_prefix)
+    {
+        for (start = launch_prefix; (end = strchr(start, ' ')); start = end+1)
+        {
+            if (start != end)
+                command.emplace_back(start, end);
+        }
+
+        command.emplace_back(start);
+    }
+
+    for (start = app.c_str(); (end = strchr(start, ' ')); start = end+1)
+    {
+        if (start != end)
+            command.emplace_back(start, end);
+    }
+
+    command.emplace_back(start);
+
+    external_client_launcher.launch(command);
 }
 
 

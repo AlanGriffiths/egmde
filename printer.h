@@ -42,7 +42,7 @@ struct Printer
 private:
     struct Codecvt : std::codecvt_byname<wchar_t, char, std::mbstate_t>
     {
-        Codecvt() : std::codecvt_byname<wchar_t, char, std::mbstate_t>("") {}
+        Codecvt() : std::codecvt_byname<wchar_t, char, std::mbstate_t>("C") {}
         ~Codecvt() = default;
     };
 

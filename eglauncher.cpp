@@ -40,7 +40,6 @@
 #include <cstring>
 #include <exception>
 #include <iostream>
-#include <locale>
 #include <mutex>
 #include <string>
 #include <vector>

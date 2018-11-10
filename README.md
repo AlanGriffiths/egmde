@@ -16,4 +16,4 @@ basis for your own project or to offer suggestions via pull requests.
 
 ## egmde snap
 
-If you're running Ubuntu 18.04LTS, then [egmde is available as a "snap"](https://snapcraft.io/egmde).
+If you're running Ubuntu, then [egmde is available as a "snap"](https://snapcraft.io/egmde).

@@ -31,8 +31,9 @@ auto default_font() -> char const*
 
     char const* const debian_path = "/usr/share/fonts/truetype/freefont/";
     char const* const fedora_path = "/usr/share/fonts/gnu-free/";
+    char const* const arch_path   = "/usr/share/fonts/TTF/";
 
-    for (auto const path : { debian_path, fedora_path })
+    for (auto const path : { debian_path, fedora_path, arch_path })
     {
         auto const full_path = std::string{path} + default_file;
         if (access(full_path.c_str(), R_OK) == 0)

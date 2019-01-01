@@ -120,8 +120,10 @@ void egmde::Printer::print(MirGraphicsRegion const& region, std::string const& t
     }
 }
 
-void egmde::Printer::footer(MirGraphicsRegion const& region, std::initializer_list<char const*> const& lines)
+void egmde::Printer::footer(int32_t width, int32_t height, char unsigned* region_address, std::initializer_list<char const*> const& lines)
 {
+    auto const stride = 4*width;
+
     int help_width = 0;
     unsigned int help_height = 0;
     unsigned int line_height = 0;
@@ -132,7 +134,7 @@ void egmde::Printer::footer(MirGraphicsRegion const& region, std::initializer_li
 
         auto const line = converter.from_bytes(rawline);
 
-        auto const fwidth = region.width / 60;
+        auto const fwidth = width / 60;
 
         FT_Set_Pixel_Sizes(face, fwidth, 0);
 
@@ -150,12 +152,11 @@ void egmde::Printer::footer(MirGraphicsRegion const& region, std::initializer_li
         help_height += line_height;
     }
 
-    int base_y = (region.height - help_height);
-    auto* const region_address = reinterpret_cast<char unsigned*>(region.vaddr);
+    int base_y = (height - help_height);
 
     for (auto const* rawline : lines)
     {
-        int base_x = (region.width - help_width)/2;
+        int base_x = (width - help_width) / 2;
 
         auto const line = converter.from_bytes(rawline);
 
@@ -168,12 +169,12 @@ void egmde::Printer::footer(MirGraphicsRegion const& region, std::initializer_li
             auto const& bitmap = glyph->bitmap;
             auto const x = base_x + glyph->bitmap_left;
 
-            if (static_cast<int>(x + bitmap.width) <= region.width)
+            if (static_cast<int>(x + bitmap.width) <= width)
             {
                 unsigned char* src = bitmap.buffer;
 
                 auto const y = base_y - glyph->bitmap_top;
-                auto* dest = region_address + y * region.stride + 4 * x;
+                auto* dest = region_address + y * stride + 4 * x;
 
                 for (auto row = 0u; row != bitmap.rows; ++row)
                 {
@@ -184,9 +185,9 @@ void egmde::Printer::footer(MirGraphicsRegion const& region, std::initializer_li
                     }
 
                     src += bitmap.pitch;
-                    dest += region.stride;
+                    dest += stride;
 
-                    if (dest > region_address + region.height * region.stride)
+                    if (dest > region_address + height * stride)
                         break;
                 }
             }

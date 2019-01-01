@@ -120,8 +120,6 @@ egmde::FullscreenClient::FullscreenClient(wl_display* display) :
     };
 
     wl_registry_add_listener(registry.get(), &registry_listener, this);
-    wl_display_roundtrip(display);
-    wl_display_roundtrip(display);
 }
 
 void egmde::FullscreenClient::on_output_changed(Output const* output)
@@ -144,7 +142,7 @@ void egmde::FullscreenClient::on_new_output(Output const* output)
     draw_screen(outputs.insert({output, SurfaceInfo{output}}).first->second);
 }
 
-auto egmde::FullscreenClient::make_shm_pool(int size, void **data)
+auto egmde::FullscreenClient::make_shm_pool(int size, void **data) const
 -> std::unique_ptr<wl_shm_pool, void(*)(wl_shm_pool*)>
 {
     mir::Fd fd{open("/dev/shm", O_TMPFILE | O_RDWR | O_EXCL, S_IRWXU)};

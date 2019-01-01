@@ -126,7 +126,7 @@ int main(int argc, char const* argv[])
                               "wallpaper-top",    "Colour of wallpaper RGB", "0x000000"},
             CommandLineOption{[&](auto& option) { wallpaper.bottom(option);},
                               "wallpaper-bottom", "Colour of wallpaper RGB", EGMDE_WALLPAPER_BOTTOM},
-            StartupInternalClient{"wallpaper", std::ref(wallpaper)},
+            StartupInternalClient{std::ref(wallpaper)},
             external_client_launcher,
             StartupInternalClient{"launcher", std::ref(launcher)},
             Keymap{},

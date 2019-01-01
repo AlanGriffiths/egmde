@@ -41,7 +41,7 @@ public:
 
     void stop();
 
-    auto make_shm_pool(int size, void** data)
+    auto make_shm_pool(int size, void** data) const
     -> std::unique_ptr<wl_shm_pool, void (*)(wl_shm_pool*)>;
 
     wl_display* display = nullptr;

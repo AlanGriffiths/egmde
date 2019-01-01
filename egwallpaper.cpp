@@ -169,3 +169,9 @@ void egmde::Wallpaper::operator()(std::weak_ptr<mir::scene::Session> const& sess
     std::lock_guard<decltype(mutex)> lock{mutex};
     weak_session = session;
 }
+
+auto egmde::Wallpaper::session() const -> std::shared_ptr<mir::scene::Session>
+{
+    std::lock_guard<decltype(mutex)> lock{mutex};
+    return weak_session.lock();
+}

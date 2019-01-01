@@ -132,6 +132,6 @@ int main(int argc, char const* argv[])
             Keymap{},
             AppendEventFilter{keyboard_shortcuts},
             AppendEventFilter{touch_shortcuts},
-            set_window_management_policy<egmde::WindowManagerPolicy>()
+            set_window_management_policy<egmde::WindowManagerPolicy>(wallpaper)
         });
 }

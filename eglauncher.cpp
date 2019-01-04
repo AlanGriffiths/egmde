@@ -354,7 +354,7 @@ void egmde::Launcher::Self::real_launch()
         // One day we'll use the icon file
 
         static Printer printer;
-        printer.print(region, current_app->title);
+        printer.print(region.width, region.height, reinterpret_cast<unsigned char*>(region.vaddr), current_app->title);
         printer.footer(region.width, region.height, reinterpret_cast<unsigned char*>(region.vaddr),
             {"<Enter> = start app | Arrow keys = change app | initial letter = change app | <Esc> = cancel", ""});
 

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018 Octopull Limited.
+ * Copyright © 2018-2019 Octopull Limited.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -23,11 +23,10 @@
 
 #include <miral/external_client.h>
 
-#include <mir/client/connection.h>
-#include <mir/optional_value.h>
-
 #include <memory>
+#include <mutex>
 
+struct wl_display;
 namespace egmde
 {
 class Launcher
@@ -36,7 +35,7 @@ public:
     Launcher(miral::ExternalClientLauncher& external_client_launcher);
 
     // These operators are the protocol for an "Internal Client"
-    void operator()(mir::client::Connection c) { start(std::move(c)); }
+    void operator()(wl_display* display);
     void operator()(std::weak_ptr<mir::scene::Session> const&){ }
 
     void show();
@@ -44,10 +43,11 @@ public:
     void stop();
 
 private:
-    void start(mir::client::Connection connection);
+    miral::ExternalClientLauncher& external_client_launcher;
+    std::mutex mutable mutex;
 
     struct Self;
-    std::shared_ptr<Self> self;
+    std::weak_ptr<Self> self;
 };
 }
 #endif //EGMDE_LAUNCHER_H

@@ -128,7 +128,7 @@ int main(int argc, char const* argv[])
                               "wallpaper-bottom", "Colour of wallpaper RGB", EGMDE_WALLPAPER_BOTTOM},
             StartupInternalClient{std::ref(wallpaper)},
             external_client_launcher,
-            StartupInternalClient{"launcher", std::ref(launcher)},
+            StartupInternalClient{std::ref(launcher)},
             Keymap{},
             AppendEventFilter{keyboard_shortcuts},
             AppendEventFilter{touch_shortcuts},

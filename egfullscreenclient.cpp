@@ -26,6 +26,9 @@
 #include <sys/eventfd.h>
 #include <sys/mman.h>
 #include <sys/poll.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <xkbcommon/xkbcommon.h>
 
 #include <cstring>
 #include <system_error>
@@ -103,6 +106,7 @@ void egmde::FullscreenClient::Output::done(void* data, struct wl_output* /*wl_ou
 
 egmde::FullscreenClient::FullscreenClient(wl_display* display) :
     shutdown_signal{::eventfd(0, EFD_CLOEXEC)},
+    keyboard_context_{xkb_context_new(XKB_CONTEXT_NO_FLAGS)},
     registry{nullptr, [](auto){}}
 {
     if (shutdown_signal == mir::Fd::invalid)
@@ -198,6 +202,7 @@ void egmde::FullscreenClient::new_global(
     else if (strcmp(interface, "wl_seat") == 0)
     {
         self->seat = static_cast<decltype(self->seat)>(wl_registry_bind(registry, id, &wl_seat_interface, 4));
+        add_seat_listener(self, self->seat);
     }
     else if (strcmp(interface, "wl_output") == 0)
     {
@@ -294,4 +299,88 @@ void egmde::FullscreenClient::for_each_surface(std::function<void(SurfaceInfo&)>
     {
         f(const_cast<SurfaceInfo&>(os.second));
     }
+}
+
+void egmde::FullscreenClient::keyboard_keymap(wl_keyboard* /*keyboard*/, uint32_t /*format*/, int32_t fd, uint32_t size)
+{
+    char* keymap_string = static_cast<decltype(keymap_string)>(mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0));
+    xkb_keymap_unref(keyboard_map_);
+    keyboard_map_ = xkb_keymap_new_from_string(keyboard_context(), keymap_string, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+    munmap(keymap_string, size);
+    close (fd);
+    xkb_state_unref(keyboard_state_);
+    keyboard_state_ = xkb_state_new(keyboard_map_);
+}
+
+void egmde::FullscreenClient::keyboard_enter(
+    wl_keyboard* /*keyboard*/,
+    uint32_t /*serial*/,
+    wl_surface*/*surface*/,
+    wl_array* /*keys*/)
+{
+}
+
+void egmde::FullscreenClient::keyboard_leave(wl_keyboard* /*keyboard*/, uint32_t /*serial*/, wl_surface* /*surface*/)
+{
+}
+
+void egmde::FullscreenClient::keyboard_key(
+    wl_keyboard* /*keyboard*/,
+    uint32_t /*serial*/,
+    uint32_t /*time*/,
+    uint32_t /*key*/,
+    uint32_t /*state*/)
+{
+}
+
+void egmde::FullscreenClient::keyboard_modifiers(
+    wl_keyboard */*keyboard*/,
+    uint32_t /*serial*/, uint32_t mods_depressed,
+    uint32_t mods_latched,
+    uint32_t mods_locked,
+    uint32_t group)
+{
+    if (keyboard_state_)
+        xkb_state_update_mask(keyboard_state_, mods_depressed, mods_latched, mods_locked, 0, 0, group);
+}
+
+void egmde::FullscreenClient::keyboard_repeat_info(wl_keyboard* /*wl_keyboard*/, int32_t /*rate*/, int32_t /*delay*/)
+{
+}
+
+void egmde::FullscreenClient::seat_capabilities(wl_seat* seat, uint32_t capabilities)
+{
+//    if (capabilities & WL_SEAT_CAPABILITY_POINTER) {
+//        struct wl_pointer *pointer = wl_seat_get_pointer (seat);
+//        wl_pointer_add_listener (pointer, &pointer_listener, NULL);
+//    }
+    if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD)
+    {
+        static struct wl_keyboard_listener keyboard_listener =
+            {
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->keyboard_keymap(args...); },
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->keyboard_enter(args...); },
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->keyboard_leave(args...); },
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->keyboard_key(args...); },
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->keyboard_modifiers(args...); },
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->keyboard_repeat_info(args...); },
+            };
+
+        wl_keyboard_add_listener(wl_seat_get_keyboard(seat), &keyboard_listener, this);
+    }
+}
+
+void egmde::FullscreenClient::seat_name(wl_seat* /*seat*/, const char */*name*/)
+{
+}
+
+void egmde::FullscreenClient::add_seat_listener(FullscreenClient* self, wl_seat* seat)
+{
+    static struct wl_seat_listener seat_listener =
+        {
+            [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->seat_capabilities(args...); },
+            [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->seat_name(args...); },
+        };
+
+    wl_seat_add_listener(seat, &seat_listener, self);
 }

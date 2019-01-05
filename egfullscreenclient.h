@@ -28,6 +28,10 @@
 #include <memory>
 #include <mutex>
 
+struct xkb_context;
+struct xkb_keymap;
+struct xkb_state;
+
 namespace egmde
 {
 class FullscreenClient
@@ -143,6 +147,24 @@ public:
 
     void for_each_surface(std::function<void(SurfaceInfo&)> const& f) const;
 
+protected:
+
+    virtual void keyboard_keymap(wl_keyboard* keyboard, uint32_t format, int32_t fd, uint32_t size);
+    virtual void keyboard_enter(wl_keyboard* keyboard, uint32_t serial, wl_surface* surface, wl_array* keys);
+    virtual void keyboard_leave(wl_keyboard* keyboard, uint32_t serial, wl_surface* surface);
+    virtual void keyboard_key(wl_keyboard* keyboard, uint32_t serial, uint32_t time, uint32_t key, uint32_t state);
+    virtual void keyboard_modifiers(
+        wl_keyboard* keyboard,
+        uint32_t serial,
+        uint32_t mods_depressed,
+        uint32_t mods_latched,
+        uint32_t mods_locked,
+        uint32_t group);
+    virtual void keyboard_repeat_info(wl_keyboard* wl_keyboard, int32_t rate, int32_t delay);
+    xkb_context* keyboard_context() const { return keyboard_context_; }
+    xkb_keymap* keyboard_map() const { return keyboard_map_; }
+    xkb_state* keyboard_state() const { return keyboard_state_; }
+
 private:
     void on_new_output(Output const*);
 
@@ -169,6 +191,14 @@ private:
         void* data,
         struct wl_registry* registry,
         uint32_t name);
+
+    static void add_seat_listener(FullscreenClient* self, wl_seat* seat);
+    void seat_capabilities(wl_seat* seat, uint32_t capabilities);
+    void seat_name(wl_seat* seat, const char* name);
+
+    xkb_context* keyboard_context_;
+    xkb_keymap* keyboard_map_ = nullptr;
+    xkb_state* keyboard_state_ = nullptr;
 
     std::unique_ptr<wl_registry, decltype(&wl_registry_destroy)> registry;
 

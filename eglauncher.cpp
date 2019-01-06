@@ -21,6 +21,7 @@
 #include "printer.h"
 
 #include <linux/input.h>
+#include <xkbcommon/xkbcommon.h>
 
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -210,24 +211,15 @@ struct egmde::Launcher::Self : egmde::FullscreenClient
 
     void start();
 
-    void launch();
-
-//    void stop();
-//
-//private:
-//    static void lifecycle_event_callback(MirConnection* /*connection*/, MirLifecycleState state, void* context);
-//    static void window_event_callback(MirWindow* window, MirEvent const* event, void* context);
-//    void handle_input(MirInputEvent const* event);
-//    void handle_keyboard(MirKeyboardEvent const* event);
-//    void handle_pointer(MirPointerEvent const* event);
-//    void handle_touch(MirTouchEvent const* event);
-//    void resize(int new_width, int new_height);
-    void real_launch();
-
+private:
     void prev_app();
     void next_app();
     void run_app();
 
+    void keyboard_key(wl_keyboard* keyboard, uint32_t serial, uint32_t time, uint32_t key, uint32_t state) override;
+    void keyboard_leave(wl_keyboard* keyboard, uint32_t serial, wl_surface* surface) override;
+
+public:
     ExternalClientLauncher& external_client_launcher;
 
     unsigned width = 0;
@@ -260,17 +252,14 @@ void egmde::Launcher::stop()
 
 void egmde::Launcher::show()
 {
-    puts(__PRETTY_FUNCTION__);
     if (auto ss = self.lock())
     {
-        puts(" . . Calling start()");
         ss->start();
     }
 }
 
 void egmde::Launcher::operator()(wl_display* display)
 {
-    puts(__PRETTY_FUNCTION__);
     auto client = std::make_shared<Self>(display, external_client_launcher);
     self = client;
     client->run(display);
@@ -296,147 +285,6 @@ void egmde::Launcher::Self::start()
     }
 }
 
-void egmde::Launcher::Self::launch()
-{
-    puts(__PRETTY_FUNCTION__);
-//    {
-//        std::lock_guard<decltype(mutex)> lock{mutex};
-//        if (running)
-//            return;
-//
-//        running = true;
-//    }
-//
-//    enqueue_work(std::bind(&Self::real_launch, this));
-}
-
-void egmde::Launcher::Self::real_launch()
-{
-    puts(__PRETTY_FUNCTION__);
-//    mc::DisplayConfig{connection}.for_each_output([this](MirOutput const* output)
-//    {
-//        if (!mir_output_is_enabled(output))
-//            return;
-//
-//         width = std::max(width, mir_output_get_logical_width(output));
-//         height = std::max(height, mir_output_get_logical_height(output));
-//    });
-//
-//    surface = mc::Surface{mir_connection_create_render_surface_sync(connection, width, height)};
-//    buffer_stream = mir_render_surface_get_buffer_stream(surface, width, height, mir_pixel_format_argb_8888);
-//
-//    window = mc::WindowSpec::for_normal_window(connection, width, height)
-//            .set_name("launcher")
-//            .set_event_handler(&window_event_callback, this)
-//            .set_fullscreen_on_output(0)
-//            .add_surface(surface, width, height, 0, 0)
-//            .create_window();
-//
-//    stopping = false;
-//
-//    while (!exec_currrent_app && !stopping)
-//    {
-//        std::unique_lock<decltype(mutex)> lock{mutex};
-//
-//        if (resize_)
-//        {
-//            auto const& size = resize_.value();
-//            mir_render_surface_set_size(surface, size.width.as_uint32_t(), size.height.as_uint32_t());
-//            mir_buffer_stream_set_size(buffer_stream, size.width.as_uint32_t(), size.height.as_uint32_t());
-//            mc::WindowSpec::for_changes(connection)
-//                .add_surface(surface, size.width.as_uint32_t(), size.height.as_uint32_t(), 0, 0)
-//                .apply_to(window);
-//        }
-//
-//        static uint8_t const pattern[4] = { 0x1f, 0x1f, 0x1f, 0xaf };
-//
-//        MirGraphicsRegion region;
-//        mir_buffer_stream_get_graphics_region(buffer_stream, &region);
-//
-//        char* row = region.vaddr;
-//
-//        for (int j = 0; j != region.height; ++j)
-//        {
-//            for (int i = 0; i < region.width; i++)
-//                memcpy(row+4*i, pattern, 4);
-//            row += region.stride;
-//        }
-//
-//        // One day we'll use the icon file
-//
-//        static Printer printer;
-//        printer.print(region, current_app->title);
-//        printer.footer(region.width, region.height, reinterpret_cast<unsigned char*>(region.vaddr),
-//            {"<Enter> = start app | Arrow keys = change app | initial letter = change app | <Esc> = cancel", ""});
-//
-//        mir_buffer_stream_swap_buffers_sync(buffer_stream);
-//        height = region.height;
-//        width = region.width;
-//
-//        if (resize_)
-//        {
-//            auto const& size = resize_.value();
-//            if (width == size.width.as_uint32_t() && height == size.height.as_uint32_t())
-//                resize_.consume();
-//            else
-//                continue;
-//        }
-//
-//        cv.wait(lock);
-//    }
-//
-//    {
-//        mc::Window temp;
-//        std::unique_lock<decltype(mutex)> lock{mutex};
-//        temp = window;
-//        window.reset();
-//        buffer_stream = nullptr;
-//        surface.reset();
-//        running = false;
-//        if (!exec_currrent_app)
-//        {
-//            return;
-//        }
-//        exec_currrent_app = false;
-//    }
-//
-//    setenv("NO_AT_BRIDGE", "1", 1);
-//    unsetenv("DISPLAY");
-//
-//    auto app = current_app->exec;
-//    auto ws = app.find(' ');
-//    if (ws != std::string::npos)
-//        app.erase(ws);
-//
-//    static char const* launch_prefix = getenv("EGMDE_LAUNCH_PREFIX");
-//
-//    std::vector<std::string> command;
-//
-//    char const* start = nullptr;
-//    char const* end = nullptr;
-//
-//    if (launch_prefix)
-//    {
-//        for (start = launch_prefix; (end = strchr(start, ' ')); start = end+1)
-//        {
-//            if (start != end)
-//                command.emplace_back(start, end);
-//        }
-//
-//        command.emplace_back(start);
-//    }
-//
-//    for (start = app.c_str(); (end = strchr(start, ' ')); start = end+1)
-//    {
-//        if (start != end)
-//            command.emplace_back(start, end);
-//    }
-//
-//    command.emplace_back(start);
-//
-//    external_client_launcher.launch(command);
-}
-
 //void egmde::Launcher::Self::handle_input(MirInputEvent const* event)
 //{
 //    switch (mir_input_event_get_type(event))
@@ -456,74 +304,64 @@ void egmde::Launcher::Self::real_launch()
 //    default:;
 //    }
 //}
-//
-//void egmde::Launcher::Self::handle_keyboard(MirKeyboardEvent const* event)
-//{
-//    if (mir_keyboard_event_action(event) == mir_keyboard_action_down)
-//        switch (mir_keyboard_event_scan_code(event))
-//        {
-//        case KEY_RIGHT:
-//        case KEY_DOWN:
-//        {
-//            std::lock_guard<decltype(mutex)> lock{mutex};
-//            next_app();
-//            break;
-//        }
-//
-//        case KEY_LEFT:
-//        case KEY_UP:
-//        {
-//            std::lock_guard<decltype(mutex)> lock{mutex};
-//            prev_app();
-//            break;
-//        }
-//
-//        case KEY_ENTER:
-//        case KEY_SPACE:
-//        {
-//            std::lock_guard<decltype(mutex)> lock{mutex};
-//            run_app();
-//            break;
-//        }
-//
-//        case KEY_ESC:
-//        {
-//            std::lock_guard<decltype(mutex)> lock{mutex};
-//            stopping = true;
-//            cv.notify_one();
-//            break;
-//        }
-//
-//        default:
-//        {
-//            auto const temp = mir_keyboard_event_key_text(event);
-//
-//            if (isalnum(*temp))
-//            {
-//                char const text[] = {static_cast<char>(toupper(*temp)), '\0'};
-//
-//                auto p = current_app + 1;
-//                auto end = apps.end();
-//
-//                if (p == end || text < current_app->name.substr(0,1))
-//                {
-//                    p = apps.begin();
-//                    end = current_app;
-//                }
-//
-//                while (text > p->name.substr(0,1) && p != apps.end())
-//                    ++p;
-//
-//                if (p != apps.end())
-//                {
-//                    current_app = p;
-//                    cv.notify_one();
-//                }
-//            }
-//        }
-//        }
-//}
-//
+
+void egmde::Launcher::Self::keyboard_key(wl_keyboard* /*keyboard*/, uint32_t /*serial*/, uint32_t /*time*/, uint32_t key, uint32_t state)
+{
+    if (state == WL_KEYBOARD_KEY_STATE_PRESSED)
+    {
+        switch (auto const keysym = xkb_state_key_get_one_sym(keyboard_state(), key+8))
+        {
+        case XKB_KEY_Right:
+        case XKB_KEY_Down:
+            next_app();
+            break;
+
+        case XKB_KEY_Left:
+        case XKB_KEY_Up:
+            prev_app();
+            break;
+
+        case XKB_KEY_Return:
+        case XKB_KEY_space:
+            run_app();
+            break;
+
+        case XKB_KEY_Escape:
+            running = false;
+            for_each_surface([this](auto& info) { draw_screen(info); });
+            break;
+
+        default:
+        {
+            uint32_t utf32 = xkb_keysym_to_utf32(keysym);
+
+            if (isalnum(utf32))
+            {
+                char const text[] = {static_cast<char>(toupper(utf32)), '\0'};
+
+                auto p = current_app + 1;
+                auto end = apps.end();
+
+                if (p == end || text < current_app->name.substr(0,1))
+                {
+                    p = apps.begin();
+                    end = current_app;
+                }
+
+                while (text > p->name.substr(0,1) && p != apps.end())
+                    ++p;
+
+                if (p != apps.end())
+                {
+                    current_app = p;
+                    for_each_surface([this](auto& info) { draw_screen(info); });
+                }
+            }
+        }
+        }
+    }
+}
+
 //void egmde::Launcher::Self::handle_pointer(MirPointerEvent const* event)
 //{
 //    if (mir_pointer_event_action(event) == mir_pointer_action_button_up)
@@ -568,26 +406,62 @@ void egmde::Launcher::Self::real_launch()
 
 void egmde::Launcher::Self::run_app()
 {
-//    exec_currrent_app = true;
-//    cv.notify_one();
+    setenv("NO_AT_BRIDGE", "1", 1);
+    unsetenv("DISPLAY");
+
+    auto app = current_app->exec;
+    auto ws = app.find(' ');
+    if (ws != std::string::npos)
+        app.erase(ws);
+
+    static char const* launch_prefix = getenv("EGMDE_LAUNCH_PREFIX");
+
+    std::vector<std::string> command;
+
+    char const* start = nullptr;
+    char const* end = nullptr;
+
+    if (launch_prefix)
+    {
+        for (start = launch_prefix; (end = strchr(start, ' ')); start = end+1)
+        {
+            if (start != end)
+                command.emplace_back(start, end);
+        }
+
+        command.emplace_back(start);
+    }
+
+    for (start = app.c_str(); (end = strchr(start, ' ')); start = end+1)
+    {
+        if (start != end)
+            command.emplace_back(start, end);
+    }
+
+    command.emplace_back(start);
+
+    external_client_launcher.launch(command);
+
+    running = false;
+    for_each_surface([this](auto& info) { draw_screen(info); });
 }
 
 void egmde::Launcher::Self::next_app()
 {
-//    if (++current_app == apps.end())
-//        current_app = apps.begin();
-//
-//    cv.notify_one();
+    if (++current_app == apps.end())
+        current_app = apps.begin();
+
+    for_each_surface([this](auto& info) { draw_screen(info); });
 }
 
 void egmde::Launcher::Self::prev_app()
 {
-//    if (current_app == apps.begin())
-//        current_app = apps.end();
-//
-//    --current_app;
-//
-//    cv.notify_one();
+    if (current_app == apps.begin())
+        current_app = apps.end();
+
+    --current_app;
+
+    for_each_surface([this](auto& info) { draw_screen(info); });
 }
 
 egmde::Launcher::Self::Self(wl_display* display, ExternalClientLauncher& external_client_launcher) :
@@ -612,7 +486,6 @@ void egmde::Launcher::Self::draw_screen(SurfaceInfo& info) const
 
 void egmde::Launcher::Self::show_screen(SurfaceInfo& info) const
 {
-    puts(__PRETTY_FUNCTION__);
     bool const rotated = info.output->transform & WL_OUTPUT_TRANSFORM_90;
     auto const width = rotated ? info.output->height : info.output->width;
     auto const height = rotated ? info.output->width : info.output->height;
@@ -676,4 +549,11 @@ void egmde::Launcher::Self::show_screen(SurfaceInfo& info) const
 void egmde::Launcher::Self::clear_screen(SurfaceInfo& info) const
 {
     info.clear_window();
+    wl_display_roundtrip(display);
+}
+
+void egmde::Launcher::Self::keyboard_leave(wl_keyboard* /*keyboard*/, uint32_t /*serial*/, wl_surface* /*surface*/)
+{
+    running = false;
+    for_each_surface([this](auto& info) { draw_screen(info); });
 }

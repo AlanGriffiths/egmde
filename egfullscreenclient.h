@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018 Octopull Ltd.
+ * Copyright © 2018-2019 Octopull Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -164,6 +164,16 @@ protected:
     xkb_context* keyboard_context() const { return keyboard_context_; }
     xkb_keymap* keyboard_map() const { return keyboard_map_; }
     xkb_state* keyboard_state() const { return keyboard_state_; }
+
+    virtual void pointer_enter(wl_pointer* pointer, uint32_t serial, wl_surface* surface, wl_fixed_t x, wl_fixed_t y);
+    virtual void pointer_leave(wl_pointer* pointer, uint32_t serial, wl_surface* surface);
+    virtual void pointer_motion(wl_pointer* pointer, uint32_t time, wl_fixed_t x, wl_fixed_t y);
+    virtual void pointer_button(wl_pointer* pointer, uint32_t serial, uint32_t time, uint32_t button, uint32_t state);
+    virtual void pointer_axis(wl_pointer* pointer, uint32_t time, uint32_t axis, wl_fixed_t value);
+    virtual void pointer_frame(wl_pointer* pointer);
+    virtual void pointer_axis_source(wl_pointer* pointer, uint32_t axis_source);
+    virtual void pointer_axis_stop(wl_pointer* pointer, uint32_t time, uint32_t axis);
+    virtual void pointer_axis_discrete(wl_pointer* pointer, uint32_t axis, int32_t discrete);
 
 private:
     void on_new_output(Output const*);

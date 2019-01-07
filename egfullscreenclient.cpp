@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018 Octopull Ltd.
+ * Copyright © 2018-2019 Octopull Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -348,12 +348,76 @@ void egmde::FullscreenClient::keyboard_repeat_info(wl_keyboard* /*wl_keyboard*/,
 {
 }
 
+void egmde::FullscreenClient::pointer_enter(
+    wl_pointer* /*pointer*/,
+    uint32_t /*serial*/,
+    wl_surface* /*surface*/,
+    wl_fixed_t /*x*/,
+    wl_fixed_t /*y*/)
+{
+}
+
+void egmde::FullscreenClient::pointer_leave(wl_pointer* /*pointer*/, uint32_t /*serial*/, wl_surface* /*surface*/)
+{
+}
+
+void egmde::FullscreenClient::pointer_motion(wl_pointer* /*pointer*/, uint32_t /*time*/, wl_fixed_t /*x*/, wl_fixed_t /*y*/)
+{
+}
+
+void egmde::FullscreenClient::pointer_button(
+    wl_pointer* /*pointer*/,
+    uint32_t /*serial*/,
+    uint32_t /*time*/,
+    uint32_t /*button*/,
+    uint32_t /*state*/)
+{
+}
+
+void egmde::FullscreenClient::pointer_axis(
+    wl_pointer* /*pointer*/,
+    uint32_t /*time*/,
+    uint32_t /*axis*/,
+    wl_fixed_t /*value*/)
+{
+}
+
+void egmde::FullscreenClient::pointer_frame(wl_pointer* /*pointer*/)
+{
+}
+
+void egmde::FullscreenClient::pointer_axis_source(wl_pointer* /*pointer*/, uint32_t /*axis_source*/)
+{
+}
+
+void egmde::FullscreenClient::pointer_axis_stop(wl_pointer* /*pointer*/, uint32_t /*time*/, uint32_t /*axis*/)
+{
+}
+
+void egmde::FullscreenClient::pointer_axis_discrete(wl_pointer* /*pointer*/, uint32_t /*axis*/, int32_t /*discrete*/)
+{
+}
+
 void egmde::FullscreenClient::seat_capabilities(wl_seat* seat, uint32_t capabilities)
 {
-//    if (capabilities & WL_SEAT_CAPABILITY_POINTER) {
-//        struct wl_pointer *pointer = wl_seat_get_pointer (seat);
-//        wl_pointer_add_listener (pointer, &pointer_listener, NULL);
-//    }
+    if (capabilities & WL_SEAT_CAPABILITY_POINTER) {
+        static wl_pointer_listener pointer_listener =
+            {
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->pointer_enter(args...); },
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->pointer_leave(args...); },
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->pointer_motion(args...); },
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->pointer_button(args...); },
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->pointer_axis(args...); },
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->pointer_frame(args...); },
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->pointer_axis_source(args...); },
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->pointer_axis_stop(args...); },
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->pointer_axis_discrete(args...); },
+            };
+
+        struct wl_pointer *pointer = wl_seat_get_pointer(seat);
+        wl_pointer_add_listener (pointer, &pointer_listener, this);
+    }
+
     if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD)
     {
         static struct wl_keyboard_listener keyboard_listener =

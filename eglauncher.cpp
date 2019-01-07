@@ -219,11 +219,14 @@ private:
     void keyboard_key(wl_keyboard* keyboard, uint32_t serial, uint32_t time, uint32_t key, uint32_t state) override;
     void keyboard_leave(wl_keyboard* keyboard, uint32_t serial, wl_surface* surface) override;
 
-public:
+    void pointer_motion(wl_pointer* pointer, uint32_t time, wl_fixed_t x, wl_fixed_t y) override;
+    void pointer_button(wl_pointer* pointer, uint32_t serial, uint32_t time, uint32_t button, uint32_t state) override;
+    void pointer_enter(wl_pointer* pointer, uint32_t serial, wl_surface* surface, wl_fixed_t x, wl_fixed_t y) override;
+
     ExternalClientLauncher& external_client_launcher;
 
-    unsigned width = 0;
-    unsigned height = 0;
+    int pointer_y = 0;
+    int height = 0;
 
     std::vector<app_details> const apps = load_details();
 
@@ -362,22 +365,51 @@ void egmde::Launcher::Self::keyboard_key(wl_keyboard* /*keyboard*/, uint32_t /*s
     }
 }
 
-//void egmde::Launcher::Self::handle_pointer(MirPointerEvent const* event)
-//{
-//    if (mir_pointer_event_action(event) == mir_pointer_action_button_up)
-//    {
-//        std::lock_guard<decltype(mutex)> lock{mutex};
-//        auto const y = mir_pointer_event_axis_value(event, mir_pointer_axis_y);
-//
-//        if (y < height/3)
-//            prev_app();
-//        else if (y > (2*height)/3)
-//            next_app();
-//        else
-//            run_app();
-//    }
-//}
-//
+void egmde::Launcher::Self::pointer_motion(wl_pointer* pointer, uint32_t time, wl_fixed_t x, wl_fixed_t y)
+{
+    pointer_y = wl_fixed_to_int(y);
+    FullscreenClient::pointer_motion(pointer, time, x, y);
+}
+
+void egmde::Launcher::Self::pointer_button(
+    wl_pointer* pointer,
+    uint32_t serial,
+    uint32_t time,
+    uint32_t button,
+    uint32_t state)
+{
+    if (BTN_LEFT == button &&
+        WL_POINTER_BUTTON_STATE_PRESSED == state)
+    {
+        if (pointer_y < height/3)
+            prev_app();
+        else if (pointer_y > (2*height)/3)
+            next_app();
+        else
+            run_app();
+    }
+
+    FullscreenClient::pointer_button(pointer, serial, time, button, state);
+}
+
+void egmde::Launcher::Self::pointer_enter(
+    wl_pointer* pointer,
+    uint32_t serial,
+    wl_surface* surface,
+    wl_fixed_t x,
+    wl_fixed_t y)
+{
+    pointer_y = wl_fixed_to_int(y);
+
+    for_each_surface([&, this](SurfaceInfo& info)
+        {
+            if (surface == info.surface)
+                height = info.output->height;
+        });
+
+    FullscreenClient::pointer_enter(pointer, serial, surface, x, y);
+}
+
 //void egmde::Launcher::Self::handle_touch(MirTouchEvent const* event)
 //{
 //    auto const count = mir_touch_event_point_count(event);

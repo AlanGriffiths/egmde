@@ -175,6 +175,43 @@ protected:
     virtual void pointer_axis_stop(wl_pointer* pointer, uint32_t time, uint32_t axis);
     virtual void pointer_axis_discrete(wl_pointer* pointer, uint32_t axis, int32_t discrete);
 
+    virtual void touch_down(
+        wl_touch* touch,
+        uint32_t serial,
+        uint32_t time,
+        wl_surface* surface,
+        int32_t id,
+        wl_fixed_t x,
+        wl_fixed_t y);
+
+    virtual void touch_up(
+        wl_touch* touch,
+        uint32_t serial,
+        uint32_t time,
+        int32_t id);
+
+    virtual void touch_motion(
+        wl_touch* touch,
+        uint32_t time,
+        int32_t id,
+        wl_fixed_t x,
+        wl_fixed_t y);
+
+    virtual void touch_frame(wl_touch* touch);
+
+    virtual void touch_cancel(wl_touch* touch);
+
+    virtual void touch_shape(
+        wl_touch* touch,
+        int32_t id,
+        wl_fixed_t major,
+        wl_fixed_t minor);
+
+    virtual void touch_orientation(
+        wl_touch* touch,
+        int32_t id,
+        wl_fixed_t orientation);
+
 private:
     void on_new_output(Output const*);
 

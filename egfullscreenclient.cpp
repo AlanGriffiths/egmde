@@ -398,6 +398,57 @@ void egmde::FullscreenClient::pointer_axis_discrete(wl_pointer* /*pointer*/, uin
 {
 }
 
+void egmde::FullscreenClient::touch_down(
+    wl_touch* /*touch*/,
+    uint32_t /*serial*/,
+    uint32_t /*time*/,
+    wl_surface* /*surface*/,
+    int32_t /*id*/,
+    wl_fixed_t /*x*/,
+    wl_fixed_t /*y*/)
+{
+}
+
+void egmde::FullscreenClient::touch_up(
+    wl_touch* /*touch*/,
+    uint32_t /*serial*/,
+    uint32_t /*time*/,
+    int32_t /*id*/)
+{
+}
+
+void egmde::FullscreenClient::touch_motion(
+    wl_touch* /*touch*/,
+    uint32_t /*time*/,
+    int32_t /*id*/,
+    wl_fixed_t /*x*/,
+    wl_fixed_t /*y*/)
+{
+}
+
+void egmde::FullscreenClient::touch_frame(wl_touch* /*touch*/)
+{
+}
+    
+void egmde::FullscreenClient::touch_cancel(wl_touch* /*touch*/)
+{
+}
+
+void egmde::FullscreenClient::touch_shape(
+    wl_touch* /*touch*/,
+    int32_t /*id*/,
+    wl_fixed_t /*major*/,
+    wl_fixed_t /*minor*/)
+{
+}
+
+void egmde::FullscreenClient::touch_orientation(
+    wl_touch* /*touch*/,
+    int32_t /*id*/,
+    wl_fixed_t /*orientation*/)
+{
+}
+
 void egmde::FullscreenClient::seat_capabilities(wl_seat* seat, uint32_t capabilities)
 {
     if (capabilities & WL_SEAT_CAPABILITY_POINTER) {
@@ -431,6 +482,22 @@ void egmde::FullscreenClient::seat_capabilities(wl_seat* seat, uint32_t capabili
             };
 
         wl_keyboard_add_listener(wl_seat_get_keyboard(seat), &keyboard_listener, this);
+    }
+
+    if (capabilities & WL_SEAT_CAPABILITY_TOUCH)
+    {
+        static struct wl_touch_listener touch_listener =
+        {
+            [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->touch_down(args...); },
+            [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->touch_up(args...); },
+            [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->touch_motion(args...); },
+            [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->touch_frame(args...); },
+            [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->touch_cancel(args...); },
+            [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->touch_shape(args...); },
+            [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->touch_orientation(args...); },
+        };
+
+        wl_touch_add_listener(wl_seat_get_touch(seat), &touch_listener, this);
     }
 }
 

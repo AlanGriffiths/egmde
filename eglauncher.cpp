@@ -223,6 +223,10 @@ private:
     void pointer_button(wl_pointer* pointer, uint32_t serial, uint32_t time, uint32_t button, uint32_t state) override;
     void pointer_enter(wl_pointer* pointer, uint32_t serial, wl_surface* surface, wl_fixed_t x, wl_fixed_t y) override;
 
+    void touch_down(
+        wl_touch* touch, uint32_t serial, uint32_t time, wl_surface* surface, int32_t id, wl_fixed_t x,
+        wl_fixed_t y) override;
+
     ExternalClientLauncher& external_client_launcher;
 
     int pointer_y = 0;
@@ -410,31 +414,30 @@ void egmde::Launcher::Self::pointer_enter(
     FullscreenClient::pointer_enter(pointer, serial, surface, x, y);
 }
 
-//void egmde::Launcher::Self::handle_touch(MirTouchEvent const* event)
-//{
-//    auto const count = mir_touch_event_point_count(event);
-//
-//    if (count == 1 && mir_touch_event_action(event, 0) == mir_touch_action_up)
-//    {
-//        if (mir_touch_event_axis_value(event, 0, mir_touch_axis_x) < 5)
-//        {
-//            std::lock_guard<decltype(mutex)> lock{mutex};
-//            stopping = true;
-//            cv.notify_one();
-//            return;
-//        }
-//
-//        auto const y = mir_touch_event_axis_value(event, 0, mir_touch_axis_y);
-//
-//        std::lock_guard<decltype(mutex)> lock{mutex};
-//        if (y < height/3)
-//            prev_app();
-//        else if (y > (2*height)/3)
-//            next_app();
-//        else
-//            run_app();
-//    }
-//}
+void egmde::Launcher::Self::touch_down(
+    wl_touch* touch, uint32_t serial, uint32_t time, wl_surface* surface, int32_t id, wl_fixed_t x, wl_fixed_t y)
+{
+    auto const touch_y = wl_fixed_to_int(y);
+    int height = -1;
+
+    for_each_surface([&height, surface](SurfaceInfo& info)
+         {
+             if (surface == info.surface)
+                height = info.output->height;
+         });
+
+    if (height >= 0)
+    {
+        if (touch_y < height/3)
+            prev_app();
+        else if (touch_y > (2*height)/3)
+            next_app();
+        else
+            run_app();
+    }
+
+    FullscreenClient::touch_down(touch, serial, time, surface, id, x, y);
+}
 
 void egmde::Launcher::Self::run_app()
 {

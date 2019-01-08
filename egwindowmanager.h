@@ -24,16 +24,20 @@
 namespace egmde
 {
 using namespace miral;
+class Wallpaper;
 
 class WindowManagerPolicy : public CanonicalWindowManagerPolicy
 {
 public:
-    using CanonicalWindowManagerPolicy::CanonicalWindowManagerPolicy;
+    WindowManagerPolicy(WindowManagerTools const& tools, Wallpaper const& wallpaper);
 
     // Switch apps  : Alt+Tab
     // Switch window: Alt+`
     // Close window : Alt-F4
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
+
+    WindowSpecification
+    place_new_window(ApplicationInfo const& app_info, WindowSpecification const& request_parameters) override;
 
     // Switch apps  : click on the corresponding window
     // Switch window: click on the corresponding window
@@ -56,6 +60,7 @@ public:
     void handle_request_resize(WindowInfo& window_info, MirInputEvent const* input_event, MirResizeEdge edge) override;
 
 private:
+    Wallpaper const* wallpaper;
 
     // State held for move/resize gesture by pointer
     enum PointerGesture {

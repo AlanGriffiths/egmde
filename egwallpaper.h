@@ -19,53 +19,39 @@
 #ifndef EGMDE_EGWALLPAPER_H
 #define EGMDE_EGWALLPAPER_H
 
-#include "egworker.h"
-
-#include <mir/client/connection.h>
-#include <mir/client/surface.h>
-#include <mir/client/window.h>
-
 #include <miral/application.h>
+#include <miral/window.h>
 
+#include <memory>
 #include <mutex>
-#include <vector>
+#include <string>
 
+struct wl_display;
 namespace egmde
 {
-
-class Wallpaper : Worker
+class Wallpaper
 {
 public:
-    // These operators are the protocol for an "Internal Client"
-    void operator()(mir::client::Connection c) { start(std::move(c)); }
-    void operator()(std::weak_ptr<mir::scene::Session> const&){ }
+    void operator()(wl_display* display);
+    void operator()(std::weak_ptr<mir::scene::Session> const& session);
+
+    auto session() const -> std::shared_ptr<mir::scene::Session>;
+
+    void stop();
 
     // Used in initialization to set colour
     void bottom(std::string const& option);
     void top(std::string const& option);
 
-    void start(mir::client::Connection connection);
-    void stop();
-
 private:
+    std::mutex mutable mutex;
+    std::weak_ptr<mir::scene::Session> weak_session;
 
     uint8_t bottom_colour[4] = { 0x0a, 0x24, 0x77, 0xFF };
     uint8_t top_colour[4] = { 0x00, 0x00, 0x00, 0xFF };
-    std::mutex mutable mutex;
-    mir::client::Connection connection;
 
-    struct Window
-    {
-        mir::client::Surface surface;
-        MirBufferStream* buffer_stream = nullptr;
-        mir::client::Window window;
-    };
-
-    std::vector<Window> windows;
-
-    void create_windows();
-    void handle_event(MirWindow* window, MirEvent const* ev);
-    static void handle_event(MirWindow* window, MirEvent const* event, void* context);
+    struct Self;
+    std::weak_ptr<Self> self;
 };
 }
 

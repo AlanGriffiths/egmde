@@ -19,8 +19,6 @@
 #ifndef EGMDE_PRINTER_H
 #define EGMDE_PRINTER_H
 
-#include <mir_toolkit/client_types.h>
-
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -36,8 +34,8 @@ struct Printer
     Printer(Printer const&) = delete;
     Printer& operator=(Printer const&) = delete;
 
-    void print(MirGraphicsRegion const& region, std::string const& title);
-    void footer(MirGraphicsRegion const& region, std::initializer_list<char const*> const& lines);
+    void print(int32_t width, int32_t height, char unsigned* region_address, std::string const& title);
+    void footer(int32_t width, int32_t height, char unsigned* region_address, std::initializer_list<char const*> const& lines);
 
 private:
     struct Codecvt : std::codecvt_byname<wchar_t, char, std::mbstate_t>

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2018 Octopull Limited.
+ * Copyright © 2016-2019 Octopull Limited.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -17,18 +17,11 @@
  */
 
 #include "eglauncher.h"
+#include "egfullscreenclient.h"
 #include "printer.h"
-#include "egworker.h"
-
-#include <mir/client/connection.h>
-#include <mir/client/display_config.h>
-#include <mir/client/surface.h>
-#include <mir/client/window.h>
-#include <mir/client/window_spec.h>
-
-#include <mir_toolkit/mir_buffer_stream.h>
 
 #include <linux/input.h>
+#include <xkbcommon/xkbcommon.h>
 
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -43,13 +36,12 @@
 #include <mutex>
 #include <string>
 #include <vector>
-#include <stdlib.h>
 #include <thread>
 
 #include <vector>
 #include <mir/geometry/size.h>
 
-namespace mc = mir::client;
+using namespace miral;
 
 namespace
 {
@@ -209,186 +201,226 @@ auto list_desktop_files() -> file_list
 }
 }
 
-class egmde::Launcher::Self : public Worker
+struct egmde::Launcher::Self : egmde::FullscreenClient
 {
-public:
-    Self(miral::ExternalClientLauncher& external_client_launcher) : external_client_launcher{external_client_launcher} {}
+    Self(wl_display* display, ExternalClientLauncher& external_client_launcher);
 
-    void start(mir::client::Connection connection);
+    void draw_screen(SurfaceInfo& info) const override;
+    void show_screen(SurfaceInfo& info) const;
+    void clear_screen(SurfaceInfo& info) const;
 
-    void launch();
-    void stop();
+    void start();
 
 private:
-    static void lifecycle_event_callback(MirConnection* /*connection*/, MirLifecycleState state, void* context);
-    static void window_event_callback(MirWindow* window, MirEvent const* event, void* context);
-    void handle_input(MirInputEvent const* event);
-    void handle_keyboard(MirKeyboardEvent const* event);
-    void handle_pointer(MirPointerEvent const* event);
-    void handle_touch(MirTouchEvent const* event);
-    void resize(int new_width, int new_height);
-    void real_launch();
-
     void prev_app();
     void next_app();
     void run_app();
 
-    miral::ExternalClientLauncher& external_client_launcher;
+    void keyboard_key(wl_keyboard* keyboard, uint32_t serial, uint32_t time, uint32_t key, uint32_t state) override;
+    void keyboard_leave(wl_keyboard* keyboard, uint32_t serial, wl_surface* surface) override;
 
-    mc::Connection connection;
-    mc::Surface surface;
-    MirBufferStream* buffer_stream{nullptr};
-    mc::Window window;
-    unsigned width = 0;
-    unsigned height = 0;
+    void pointer_motion(wl_pointer* pointer, uint32_t time, wl_fixed_t x, wl_fixed_t y) override;
+    void pointer_button(wl_pointer* pointer, uint32_t serial, uint32_t time, uint32_t button, uint32_t state) override;
+    void pointer_enter(wl_pointer* pointer, uint32_t serial, wl_surface* surface, wl_fixed_t x, wl_fixed_t y) override;
+
+    void touch_down(
+        wl_touch* touch, uint32_t serial, uint32_t time, wl_surface* surface, int32_t id, wl_fixed_t x,
+        wl_fixed_t y) override;
+
+    ExternalClientLauncher& external_client_launcher;
+
+    int pointer_y = 0;
+    int height = 0;
 
     std::vector<app_details> const apps = load_details();
 
     std::mutex mutable mutex;
-    std::condition_variable mutable cv;
     std::vector<app_details>::const_iterator current_app{apps.begin()};
-    bool exec_currrent_app{false};
-    bool running{false};
-    bool stopping{false};
-    mir::optional_value<mir::geometry::Size> resize_;
+//    bool exec_currrent_app{false};
+    std::atomic<bool> running{false};
+//    bool stopping{false};
+//    mir::optional_value<mir::geometry::Size> resize_;
 };
 
 egmde::Launcher::Launcher(miral::ExternalClientLauncher& external_client_launcher) :
-    self{std::make_shared<Self>(external_client_launcher)}
+    external_client_launcher{external_client_launcher}
 {
-}
-
-void egmde::Launcher::start(mc::Connection connection)
-{
-    self->start(std::move(connection));
 }
 
 void egmde::Launcher::stop()
 {
-    self->stop();
+    if (auto ss = self.lock())
+    {
+        ss->stop();
+        std::lock_guard<decltype(mutex)> lock{mutex};
+        ss.reset();
+    }
 }
 
 void egmde::Launcher::show()
 {
-    self->launch();
+    if (auto ss = self.lock())
+    {
+        ss->start();
+    }
 }
 
-void egmde::Launcher::Self::start(mir::client::Connection connection_)
+void egmde::Launcher::operator()(wl_display* display)
 {
-    connection = std::move(connection_);
-    mir_connection_set_lifecycle_event_callback(connection, &lifecycle_event_callback, this);
+    auto client = std::make_shared<Self>(display, external_client_launcher);
+    self = client;
+    client->run(display);
 
-    auto const new_terminal = std::find_if(begin(apps), end(apps),
-        [](app_details const& app) { return app.name == "Terminal"; });
-
-    if (new_terminal != end(apps))
-        current_app = new_terminal;
-
-    start_work();
+    // Possibly need to wait for stop() to release the client.
+    // (This would be less ugly with a ref-counted wrapper for wl_display* in the miral API)
+    std::lock_guard<decltype(mutex)> lock{mutex};
 }
 
-void egmde::Launcher::Self::launch()
+void egmde::Launcher::Self::start()
 {
+    if (!running.exchange(true))
     {
-        std::lock_guard<decltype(mutex)> lock{mutex};
-        if (running)
-            return;
+        auto const new_terminal = std::find_if(
+            begin(apps), end(apps),
+            [](app_details const& app)
+                { return app.name == "Terminal"; });
 
-        running = true;
+        if (new_terminal != end(apps))
+            current_app = new_terminal;
+
+        for_each_surface([this](auto& info) { draw_screen(info);});
     }
-
-    enqueue_work(std::bind(&Self::real_launch, this));
 }
 
-void egmde::Launcher::Self::real_launch()
+void egmde::Launcher::Self::keyboard_key(wl_keyboard* /*keyboard*/, uint32_t /*serial*/, uint32_t /*time*/, uint32_t key, uint32_t state)
 {
-    mc::DisplayConfig{connection}.for_each_output([this](MirOutput const* output)
+    if (state == WL_KEYBOARD_KEY_STATE_PRESSED)
     {
-        if (!mir_output_is_enabled(output))
-            return;
+        switch (auto const keysym = xkb_state_key_get_one_sym(keyboard_state(), key+8))
+        {
+        case XKB_KEY_Right:
+        case XKB_KEY_Down:
+            next_app();
+            break;
 
-         width = std::max(width, mir_output_get_logical_width(output));
-         height = std::max(height, mir_output_get_logical_height(output));
-    });
+        case XKB_KEY_Left:
+        case XKB_KEY_Up:
+            prev_app();
+            break;
 
-    surface = mc::Surface{mir_connection_create_render_surface_sync(connection, width, height)};
-    buffer_stream = mir_render_surface_get_buffer_stream(surface, width, height, mir_pixel_format_argb_8888);
+        case XKB_KEY_Return:
+        case XKB_KEY_space:
+            run_app();
+            break;
 
-    window = mc::WindowSpec::for_normal_window(connection, width, height)
-            .set_name("launcher")
-            .set_event_handler(&window_event_callback, this)
-            .set_fullscreen_on_output(0)
-            .add_surface(surface, width, height, 0, 0)
-            .create_window();
+        case XKB_KEY_Escape:
+            running = false;
+            for_each_surface([this](auto& info) { draw_screen(info); });
+            break;
 
-    stopping = false;
+        default:
+        {
+            uint32_t utf32 = xkb_keysym_to_utf32(keysym);
 
-    while (!exec_currrent_app && !stopping)
+            if (isalnum(utf32))
+            {
+                char const text[] = {static_cast<char>(toupper(utf32)), '\0'};
+
+                auto p = current_app + 1;
+                auto end = apps.end();
+
+                if (p == end || text < current_app->name.substr(0,1))
+                {
+                    p = apps.begin();
+                    end = current_app;
+                }
+
+                while (text > p->name.substr(0,1) && p != apps.end())
+                    ++p;
+
+                if (p != apps.end())
+                {
+                    current_app = p;
+                    for_each_surface([this](auto& info) { draw_screen(info); });
+                }
+            }
+        }
+        }
+    }
+}
+
+void egmde::Launcher::Self::pointer_motion(wl_pointer* pointer, uint32_t time, wl_fixed_t x, wl_fixed_t y)
+{
+    pointer_y = wl_fixed_to_int(y);
+    FullscreenClient::pointer_motion(pointer, time, x, y);
+}
+
+void egmde::Launcher::Self::pointer_button(
+    wl_pointer* pointer,
+    uint32_t serial,
+    uint32_t time,
+    uint32_t button,
+    uint32_t state)
+{
+    if (BTN_LEFT == button &&
+        WL_POINTER_BUTTON_STATE_PRESSED == state)
     {
-        std::unique_lock<decltype(mutex)> lock{mutex};
-
-        if (resize_)
-        {
-            auto const& size = resize_.value();
-            mir_render_surface_set_size(surface, size.width.as_uint32_t(), size.height.as_uint32_t());
-            mir_buffer_stream_set_size(buffer_stream, size.width.as_uint32_t(), size.height.as_uint32_t());
-            mc::WindowSpec::for_changes(connection)
-                .add_surface(surface, size.width.as_uint32_t(), size.height.as_uint32_t(), 0, 0)
-                .apply_to(window);
-        }
-
-        static uint8_t const pattern[4] = { 0x1f, 0x1f, 0x1f, 0xaf };
-
-        MirGraphicsRegion region;
-        mir_buffer_stream_get_graphics_region(buffer_stream, &region);
-
-        char* row = region.vaddr;
-
-        for (int j = 0; j != region.height; ++j)
-        {
-            for (int i = 0; i < region.width; i++)
-                memcpy(row+4*i, pattern, 4);
-            row += region.stride;
-        }
-
-        // One day we'll use the icon file
-
-        static Printer printer;
-        printer.print(region, current_app->title);
-        printer.footer(region,
-            {"<Enter> = start app | Arrow keys = change app | initial letter = change app | <Esc> = cancel", ""});
-
-        mir_buffer_stream_swap_buffers_sync(buffer_stream);
-        height = region.height;
-        width = region.width;
-
-        if (resize_)
-        {
-            auto const& size = resize_.value();
-            if (width == size.width.as_uint32_t() && height == size.height.as_uint32_t())
-                resize_.consume();
-            else
-                continue;
-        }
-
-        cv.wait(lock);
+        if (pointer_y < height/3)
+            prev_app();
+        else if (pointer_y > (2*height)/3)
+            next_app();
+        else
+            run_app();
     }
 
-    {
-        mc::Window temp;
-        std::unique_lock<decltype(mutex)> lock{mutex};
-        temp = window;
-        window.reset();
-        buffer_stream = nullptr;
-        surface.reset();
-        running = false;
-        if (!exec_currrent_app)
+    FullscreenClient::pointer_button(pointer, serial, time, button, state);
+}
+
+void egmde::Launcher::Self::pointer_enter(
+    wl_pointer* pointer,
+    uint32_t serial,
+    wl_surface* surface,
+    wl_fixed_t x,
+    wl_fixed_t y)
+{
+    pointer_y = wl_fixed_to_int(y);
+
+    for_each_surface([&, this](SurfaceInfo& info)
         {
-            return;
-        }
-        exec_currrent_app = false;
+            if (surface == info.surface)
+                height = info.output->height;
+        });
+
+    FullscreenClient::pointer_enter(pointer, serial, surface, x, y);
+}
+
+void egmde::Launcher::Self::touch_down(
+    wl_touch* touch, uint32_t serial, uint32_t time, wl_surface* surface, int32_t id, wl_fixed_t x, wl_fixed_t y)
+{
+    auto const touch_y = wl_fixed_to_int(y);
+    int height = -1;
+
+    for_each_surface([&height, surface](SurfaceInfo& info)
+         {
+             if (surface == info.surface)
+                height = info.output->height;
+         });
+
+    if (height >= 0)
+    {
+        if (touch_y < height/3)
+            prev_app();
+        else if (touch_y > (2*height)/3)
+            next_app();
+        else
+            run_app();
     }
 
+    FullscreenClient::touch_down(touch, serial, time, surface, id, x, y);
+}
+
+void egmde::Launcher::Self::run_app()
+{
     setenv("NO_AT_BRIDGE", "1", 1);
     unsetenv("DISPLAY");
 
@@ -424,211 +456,9 @@ void egmde::Launcher::Self::real_launch()
     command.emplace_back(start);
 
     external_client_launcher.launch(command);
-}
 
-
-void egmde::Launcher::Self::lifecycle_event_callback(MirConnection* /*connection*/, MirLifecycleState state, void* context)
-{
-    switch (state)
-    {
-    case mir_lifecycle_state_will_suspend:
-    case mir_lifecycle_state_resumed:
-        return;
-
-    case mir_lifecycle_connection_lost:
-        auto self = (Self*)context;
-        self->stop_work();
-        break;
-    }
-}
-
-void egmde::Launcher::Self::window_event_callback(MirWindow* /*window*/, MirEvent const* event, void* context)
-{
-    switch (mir_event_get_type(event))
-    {
-    case mir_event_type_input:
-    {
-        auto const input_event = mir_event_get_input_event(event);
-        auto self = (Self*)context;
-        self->handle_input(input_event);
-        break;
-    }
-
-    case mir_event_type_resize:
-    {
-        auto const self = (Self*)context;
-        auto const resize = mir_event_get_resize_event(event);
-        auto const new_width = mir_resize_event_get_width(resize);
-        auto const new_height= mir_resize_event_get_height(resize);
-
-        self->resize(new_width, new_height);
-        break;
-    }
-
-    case mir_event_type_window:
-    {
-        auto window_event = mir_event_get_window_event(event);
-        if (mir_window_attrib_focus == mir_window_event_get_attribute(window_event) &&
-            mir_window_focus_state_unfocused == mir_window_event_get_attribute_value(window_event))
-        {
-            auto const self = (Self*)context;
-            std::lock_guard<decltype(self->mutex)> lock{self->mutex};
-            self->stopping = true;
-            self->running = false;
-            self->cv.notify_one();
-        }
-        break;
-    }
-
-    case mir_event_type_close_window:
-    {
-        auto self = (Self*)context;
-        self->stop_work();
-        break;
-    }
-    default:
-        ;
-    }
-}
-
-void egmde::Launcher::Self::resize(int new_width, int new_height)
-{
-    resize_ = mir::geometry::Size{new_width, new_height};
-}
-
-void egmde::Launcher::Self::handle_input(MirInputEvent const* event)
-{
-    switch (mir_input_event_get_type(event))
-    {
-    case mir_input_event_type_key:
-        handle_keyboard(mir_input_event_get_keyboard_event(event));
-        break;
-
-    case mir_input_event_type_pointer:
-        handle_pointer(mir_input_event_get_pointer_event(event));
-        break;
-
-    case mir_input_event_type_touch:
-        handle_touch(mir_input_event_get_touch_event(event));
-        break;
-
-    default:;
-    }
-}
-
-void egmde::Launcher::Self::handle_keyboard(MirKeyboardEvent const* event)
-{
-    if (mir_keyboard_event_action(event) == mir_keyboard_action_down)
-        switch (mir_keyboard_event_scan_code(event))
-        {
-        case KEY_RIGHT:
-        case KEY_DOWN:
-        {
-            std::lock_guard<decltype(mutex)> lock{mutex};
-            next_app();
-            break;
-        }
-
-        case KEY_LEFT:
-        case KEY_UP:
-        {
-            std::lock_guard<decltype(mutex)> lock{mutex};
-            prev_app();
-            break;
-        }
-
-        case KEY_ENTER:
-        case KEY_SPACE:
-        {
-            std::lock_guard<decltype(mutex)> lock{mutex};
-            run_app();
-            break;
-        }
-
-        case KEY_ESC:
-        {
-            std::lock_guard<decltype(mutex)> lock{mutex};
-            stopping = true;
-            cv.notify_one();
-            break;
-        }
-
-        default:
-        {
-            auto const temp = mir_keyboard_event_key_text(event);
-
-            if (isalnum(*temp))
-            {
-                char const text[] = {static_cast<char>(toupper(*temp)), '\0'};
-
-                auto p = current_app + 1;
-                auto end = apps.end();
-
-                if (p == end || text < current_app->name.substr(0,1))
-                {
-                    p = apps.begin();
-                    end = current_app;
-                }
-
-                while (text > p->name.substr(0,1) && p != apps.end())
-                    ++p;
-
-                if (p != apps.end())
-                {
-                    current_app = p;
-                    cv.notify_one();
-                }
-            }
-        }
-        }
-}
-
-void egmde::Launcher::Self::handle_pointer(MirPointerEvent const* event)
-{
-    if (mir_pointer_event_action(event) == mir_pointer_action_button_up)
-    {
-        std::lock_guard<decltype(mutex)> lock{mutex};
-        auto const y = mir_pointer_event_axis_value(event, mir_pointer_axis_y);
-
-        if (y < height/3)
-            prev_app();
-        else if (y > (2*height)/3)
-            next_app();
-        else
-            run_app();
-    }
-}
-
-void egmde::Launcher::Self::handle_touch(MirTouchEvent const* event)
-{
-    auto const count = mir_touch_event_point_count(event);
-
-    if (count == 1 && mir_touch_event_action(event, 0) == mir_touch_action_up)
-    {
-        if (mir_touch_event_axis_value(event, 0, mir_touch_axis_x) < 5)
-        {
-            std::lock_guard<decltype(mutex)> lock{mutex};
-            stopping = true;
-            cv.notify_one();
-            return;
-        }
-
-        auto const y = mir_touch_event_axis_value(event, 0, mir_touch_axis_y);
-
-        std::lock_guard<decltype(mutex)> lock{mutex};
-        if (y < height/3)
-            prev_app();
-        else if (y > (2*height)/3)
-            next_app();
-        else
-            run_app();
-    }
-}
-
-void egmde::Launcher::Self::run_app()
-{
-    exec_currrent_app = true;
-    cv.notify_one();
+    running = false;
+    for_each_surface([this](auto& info) { draw_screen(info); });
 }
 
 void egmde::Launcher::Self::next_app()
@@ -636,7 +466,7 @@ void egmde::Launcher::Self::next_app()
     if (++current_app == apps.end())
         current_app = apps.begin();
 
-    cv.notify_one();
+    for_each_surface([this](auto& info) { draw_screen(info); });
 }
 
 void egmde::Launcher::Self::prev_app()
@@ -646,15 +476,99 @@ void egmde::Launcher::Self::prev_app()
 
     --current_app;
 
-    cv.notify_one();
+    for_each_surface([this](auto& info) { draw_screen(info); });
 }
 
-void egmde::Launcher::Self::stop()
+egmde::Launcher::Self::Self(wl_display* display, ExternalClientLauncher& external_client_launcher) :
+    FullscreenClient{display},
+    external_client_launcher{external_client_launcher}
 {
+    wl_display_roundtrip(display);
+    wl_display_roundtrip(display);
+}
+
+void egmde::Launcher::Self::draw_screen(SurfaceInfo& info) const
+{
+    if (running)
     {
-        std::unique_lock<decltype(mutex)> lock{mutex};
-        stopping = true;
-        cv.notify_one();
+        show_screen(info);
     }
-    stop_work();
+    else
+    {
+        clear_screen(info);
+    }
+}
+
+void egmde::Launcher::Self::show_screen(SurfaceInfo& info) const
+{
+    bool const rotated = info.output->transform & WL_OUTPUT_TRANSFORM_90;
+    auto const width = rotated ? info.output->height : info.output->width;
+    auto const height = rotated ? info.output->width : info.output->height;
+
+    if (width <= 0 || height <= 0)
+        return;
+
+    auto const stride = 4 * width;
+
+    if (!info.surface)
+    {
+        info.surface = wl_compositor_create_surface(compositor);
+    }
+
+    if (!info.shell_surface)
+    {
+        info.shell_surface = wl_shell_get_shell_surface(shell, info.surface);
+        wl_shell_surface_set_fullscreen(
+            info.shell_surface,
+            WL_SHELL_SURFACE_FULLSCREEN_METHOD_DEFAULT,
+            0,
+            info.output->output);
+    }
+
+    if (info.buffer)
+    {
+        wl_buffer_destroy(info.buffer);
+    }
+
+    info.buffer = wl_shm_pool_create_buffer(
+        make_shm_pool(stride * height, &info.content_area).get(),
+        0,
+        width, height, stride,
+        WL_SHM_FORMAT_ARGB8888);
+
+    static uint8_t const pattern[4] = {0x1f, 0x1f, 0x1f, 0xaf};
+
+    auto const content_area = reinterpret_cast<unsigned char*>(info.content_area);
+    auto row = content_area;
+
+    for (int j = 0; j != height; ++j)
+    {
+        for (int i = 0; i < width; i++)
+            memcpy(row + 4 * i, pattern, 4);
+        row += stride;
+    }
+
+    // One day we'll use the icon file
+
+    static Printer printer;
+    printer.print(width, height, content_area, current_app->title);
+    printer.footer(
+        width, height, content_area,
+        {"<Enter> = start app | Arrow keys = change app | initial letter = change app | <Esc> = cancel", ""});
+
+    wl_surface_attach(info.surface, info.buffer, 0, 0);
+    wl_surface_commit(info.surface);
+    wl_display_roundtrip(display);
+}
+
+void egmde::Launcher::Self::clear_screen(SurfaceInfo& info) const
+{
+    info.clear_window();
+    wl_display_roundtrip(display);
+}
+
+void egmde::Launcher::Self::keyboard_leave(wl_keyboard* /*keyboard*/, uint32_t /*serial*/, wl_surface* /*surface*/)
+{
+    running = false;
+    for_each_surface([this](auto& info) { draw_screen(info); });
 }

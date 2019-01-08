@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-18 Octopull Ltd.
+ * Copyright © 2016-19 Octopull Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -17,7 +17,9 @@
  */
 
 #include "egwindowmanager.h"
+#include "egwallpaper.h"
 
+#include <miral/application_info.h>
 #include <miral/window_info.h>
 #include <miral/window_manager_tools.h>
 
@@ -171,16 +173,6 @@ bool egmde::WindowManagerPolicy::handle_pointer_event(MirPointerEvent const* eve
 bool egmde::WindowManagerPolicy::handle_touch_event(MirTouchEvent const* event)
 {
     auto const count = mir_touch_event_point_count(event);
-
-    if (count == 1)
-    {
-        if (mir_touch_event_action(event, 0) == mir_touch_action_down &&
-            mir_touch_event_axis_value(event, 0, mir_touch_axis_x) < tools.active_output().right().as_int())
-        {
-            tools.focus_next_application();
-            return true;
-        }
-    }
 
     long total_x = 0;
     long total_y = 0;
@@ -427,4 +419,23 @@ bool egmde::WindowManagerPolicy::begin_pointer_gesture(
     }
 
     return true;
+}
+
+egmde::WindowManagerPolicy::WindowManagerPolicy(WindowManagerTools const& tools, Wallpaper const& wallpaper) :
+    CanonicalWindowManagerPolicy{tools},
+    wallpaper{&wallpaper}
+{
+}
+
+miral::WindowSpecification egmde::WindowManagerPolicy::place_new_window(
+    miral::ApplicationInfo const& app_info, miral::WindowSpecification const& request_parameters)
+{
+    auto result = CanonicalWindowManagerPolicy::place_new_window(app_info, request_parameters);
+
+    if (app_info.application() == wallpaper->session())
+    {
+        result.type() = mir_window_type_decoration;
+    }
+
+    return result;
 }

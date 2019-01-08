@@ -292,26 +292,6 @@ void egmde::Launcher::Self::start()
     }
 }
 
-//void egmde::Launcher::Self::handle_input(MirInputEvent const* event)
-//{
-//    switch (mir_input_event_get_type(event))
-//    {
-//    case mir_input_event_type_key:
-//        handle_keyboard(mir_input_event_get_keyboard_event(event));
-//        break;
-//
-//    case mir_input_event_type_pointer:
-//        handle_pointer(mir_input_event_get_pointer_event(event));
-//        break;
-//
-//    case mir_input_event_type_touch:
-//        handle_touch(mir_input_event_get_touch_event(event));
-//        break;
-//
-//    default:;
-//    }
-//}
-
 void egmde::Launcher::Self::keyboard_key(wl_keyboard* /*keyboard*/, uint32_t /*serial*/, uint32_t /*time*/, uint32_t key, uint32_t state)
 {
     if (state == WL_KEYBOARD_KEY_STATE_PRESSED)

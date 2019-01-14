@@ -217,6 +217,7 @@ private:
     void run_app();
 
     void keyboard_key(wl_keyboard* keyboard, uint32_t serial, uint32_t time, uint32_t key, uint32_t state) override;
+    void keyboard_enter(wl_keyboard *keyboard, uint32_t serial, wl_surface *surface, wl_array *keys) override;
     void keyboard_leave(wl_keyboard* keyboard, uint32_t serial, wl_surface* surface) override;
 
     void pointer_motion(wl_pointer* pointer, uint32_t time, wl_fixed_t x, wl_fixed_t y) override;
@@ -226,9 +227,6 @@ private:
     void touch_down(
         wl_touch* touch, uint32_t serial, uint32_t time, wl_surface* surface, int32_t id, wl_fixed_t x,
         wl_fixed_t y) override;
-
-protected:
-    void keyboard_enter(wl_keyboard *keyboard, uint32_t serial, wl_surface *surface, wl_array *keys) override;
 
 private:
 

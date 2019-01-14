@@ -227,6 +227,11 @@ private:
         wl_touch* touch, uint32_t serial, uint32_t time, wl_surface* surface, int32_t id, wl_fixed_t x,
         wl_fixed_t y) override;
 
+protected:
+    void keyboard_enter(wl_keyboard *keyboard, uint32_t serial, wl_surface *surface, wl_array *keys) override;
+
+private:
+
     ExternalClientLauncher& external_client_launcher;
 
     int pointer_y = 0;
@@ -236,10 +241,8 @@ private:
 
     std::mutex mutable mutex;
     std::vector<app_details>::const_iterator current_app{apps.begin()};
-//    bool exec_currrent_app{false};
     std::atomic<bool> running{false};
-//    bool stopping{false};
-//    mir::optional_value<mir::geometry::Size> resize_;
+    std::atomic<int> focussed{0};
 };
 
 egmde::Launcher::Launcher(miral::ExternalClientLauncher& external_client_launcher) :
@@ -558,17 +561,25 @@ void egmde::Launcher::Self::show_screen(SurfaceInfo& info) const
 
     wl_surface_attach(info.surface, info.buffer, 0, 0);
     wl_surface_commit(info.surface);
-    wl_display_roundtrip(display);
 }
 
 void egmde::Launcher::Self::clear_screen(SurfaceInfo& info) const
 {
     info.clear_window();
-    wl_display_roundtrip(display);
 }
 
 void egmde::Launcher::Self::keyboard_leave(wl_keyboard* /*keyboard*/, uint32_t /*serial*/, wl_surface* /*surface*/)
 {
-    running = false;
-    for_each_surface([this](auto& info) { draw_screen(info); });
+    if (--focussed == 0)
+    {
+        running = false;
+        for_each_surface([this](auto& info) { draw_screen(info); });
+    }
+}
+
+void
+egmde::Launcher::Self::keyboard_enter(wl_keyboard *keyboard, uint32_t serial, wl_surface *surface, wl_array *keys)
+{
+    ++focussed;
+    FullscreenClient::keyboard_enter(keyboard, serial, surface, keys);
 }

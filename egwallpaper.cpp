@@ -104,7 +104,6 @@ void egmde::Wallpaper::Self::draw_screen(SurfaceInfo& info) const
 
     wl_surface_attach(info.surface, info.buffer, 0, 0);
     wl_surface_commit(info.surface);
-    wl_display_roundtrip(display);
 }
 
 egmde::Wallpaper::Self::Self(wl_display* display, uint8_t* bottom_colour, uint8_t* top_colour) :

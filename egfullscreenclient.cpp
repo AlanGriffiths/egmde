@@ -142,8 +142,11 @@ void egmde::FullscreenClient::on_output_gone(Output const* output)
 
 void egmde::FullscreenClient::on_new_output(Output const* output)
 {
-    std::lock_guard<decltype(outputs_mutex)> lock{outputs_mutex};
-    draw_screen(outputs.insert({output, SurfaceInfo{output}}).first->second);
+    {
+        std::lock_guard<decltype(outputs_mutex)> lock{outputs_mutex};
+        draw_screen(outputs.insert({output, SurfaceInfo{output}}).first->second);
+    }
+    wl_display_roundtrip(display);
 }
 
 auto egmde::FullscreenClient::make_shm_pool(int size, void **data) const
@@ -294,11 +297,14 @@ void egmde::FullscreenClient::stop()
 
 void egmde::FullscreenClient::for_each_surface(std::function<void(SurfaceInfo&)> const& f) const
 {
-    std::lock_guard<decltype(outputs_mutex)> lock{outputs_mutex};
-    for (auto& os : outputs)
     {
-        f(const_cast<SurfaceInfo&>(os.second));
+        std::lock_guard<decltype(outputs_mutex)> lock{outputs_mutex};
+        for (auto& os : outputs)
+        {
+            f(const_cast<SurfaceInfo&>(os.second));
+        }
     }
+    wl_display_roundtrip(display);
 }
 
 void egmde::FullscreenClient::keyboard_keymap(wl_keyboard* /*keyboard*/, uint32_t /*format*/, int32_t fd, uint32_t size)

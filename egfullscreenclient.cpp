@@ -157,7 +157,8 @@ void egmde::FullscreenClient::on_output_changed(Output const* output)
     wl_display_roundtrip(display);
 }
 
-void egmde::FullscreenClient::on_output_gone(Output const* output) {
+void egmde::FullscreenClient::on_output_gone(Output const* output)
+{
     {
         std::lock_guard<decltype(outputs_mutex)> lock{outputs_mutex};
 

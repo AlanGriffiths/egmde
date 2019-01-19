@@ -217,7 +217,6 @@ private:
     void run_app();
 
     void keyboard_key(wl_keyboard* keyboard, uint32_t serial, uint32_t time, uint32_t key, uint32_t state) override;
-    void keyboard_enter(wl_keyboard *keyboard, uint32_t serial, wl_surface *surface, wl_array *keys) override;
     void keyboard_leave(wl_keyboard* keyboard, uint32_t serial, wl_surface* surface) override;
 
     void pointer_motion(wl_pointer* pointer, uint32_t time, wl_fixed_t x, wl_fixed_t y) override;
@@ -240,7 +239,7 @@ private:
     std::mutex mutable mutex;
     std::vector<app_details>::const_iterator current_app{apps.begin()};
     std::atomic<bool> running{false};
-    std::atomic<int> focussed{0};
+    std::atomic<Output const*> mutable showing{nullptr};
 };
 
 egmde::Launcher::Launcher(miral::ExternalClientLauncher& external_client_launcher) :
@@ -289,6 +288,7 @@ void egmde::Launcher::Self::start()
         if (new_terminal != end(apps))
             current_app = new_terminal;
 
+        showing = nullptr;
         for_each_surface([this](auto& info) { draw_screen(info);});
     }
 }
@@ -502,6 +502,15 @@ void egmde::Launcher::Self::draw_screen(SurfaceInfo& info) const
 
 void egmde::Launcher::Self::show_screen(SurfaceInfo& info) const
 {
+
+    Output const* active_output = showing.load();
+
+    if (active_output && active_output != info.output)
+        return;
+
+    if (!showing.compare_exchange_strong(active_output, info.output))
+        return;
+
     bool const rotated = info.output->transform & WL_OUTPUT_TRANSFORM_90;
     auto const width = rotated ? info.output->height : info.output->width;
     auto const height = rotated ? info.output->width : info.output->height;
@@ -568,16 +577,6 @@ void egmde::Launcher::Self::clear_screen(SurfaceInfo& info) const
 
 void egmde::Launcher::Self::keyboard_leave(wl_keyboard* /*keyboard*/, uint32_t /*serial*/, wl_surface* /*surface*/)
 {
-    if (--focussed == 0)
-    {
-        running = false;
-        for_each_surface([this](auto& info) { draw_screen(info); });
-    }
-}
-
-void
-egmde::Launcher::Self::keyboard_enter(wl_keyboard *keyboard, uint32_t serial, wl_surface *surface, wl_array *keys)
-{
-    ++focussed;
-    FullscreenClient::keyboard_enter(keyboard, serial, surface, keys);
+    running = false;
+    for_each_surface([this](auto& info) { draw_screen(info); });
 }

@@ -20,6 +20,7 @@
 #define EGMDE_EGFULLSCREENCLIENT_H
 
 #include <mir/fd.h>
+#include <mir/geometry/rectangles.h>
 
 #include <wayland-client.h>
 
@@ -223,6 +224,8 @@ private:
 
     std::mutex mutable outputs_mutex;
     std::map<Output const*, SurfaceInfo> outputs;
+    mir::geometry::Rectangles display_area;
+    std::vector<Output const*> hidden_outputs;
 
     wl_seat* seat = nullptr;
     wl_shm* shm = nullptr;

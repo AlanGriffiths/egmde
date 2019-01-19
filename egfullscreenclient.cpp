@@ -128,23 +128,103 @@ egmde::FullscreenClient::FullscreenClient(wl_display* display) :
 
 void egmde::FullscreenClient::on_output_changed(Output const* output)
 {
-    std::lock_guard<decltype(outputs_mutex)> lock{outputs_mutex};
-    auto const p = outputs.find(output);
-    if (p != end(outputs))
-        draw_screen(p->second);
+    {
+        std::lock_guard<decltype(outputs_mutex)> lock{outputs_mutex};
+        auto const p = outputs.find(output);
+        if (p != end(outputs))
+            draw_screen(p->second);
+
+        auto i = begin(hidden_outputs);
+        while (i != end(hidden_outputs))
+        {
+            mir::geometry::Rectangle const screen_rect{{(*i)->x, (*i)->y}, {(*i)->width, (*i)->height}};
+
+            if (!display_area.bounding_rectangle().overlaps(screen_rect))
+            {
+                display_area.add(screen_rect);
+                draw_screen(outputs.insert({*i, SurfaceInfo{*i}}).first->second);
+                break;
+            }
+
+            ++i;
+        }
+
+        if (i != end(hidden_outputs))
+        {
+            hidden_outputs.erase(i);
+        }
+    }
+    wl_display_roundtrip(display);
 }
 
 void egmde::FullscreenClient::on_output_gone(Output const* output)
 {
-    std::lock_guard<decltype(outputs_mutex)> lock{outputs_mutex};
-    outputs.erase(output);
+    {
+        std::lock_guard<decltype(outputs_mutex)> lock{outputs_mutex};
+
+        outputs.erase(output);
+
+        auto i = begin(hidden_outputs);
+        while (i != end(hidden_outputs))
+        {
+            if (output == *i)
+            {
+                break;
+            }
+
+            ++i;
+        }
+
+        if (i != end(hidden_outputs))
+        {
+            hidden_outputs.erase(i);
+        }
+        else
+        {
+            display_area.remove({{output->x, output->y}, {output->width, output->height}});
+        }
+
+        i = begin(hidden_outputs);
+        while (i != end(hidden_outputs))
+        {
+            mir::geometry::Rectangle const screen_rect{{(*i)->x, (*i)->y}, {(*i)->width, (*i)->height}};
+
+            if (!display_area.bounding_rectangle().overlaps(screen_rect))
+            {
+                display_area.add(screen_rect);
+                draw_screen(outputs.insert({*i, SurfaceInfo{*i}}).first->second);
+                break;
+            }
+
+            ++i;
+        }
+
+        if (i != end(hidden_outputs))
+        {
+            hidden_outputs.erase(i);
+        }
+    }
+    wl_display_roundtrip(display);
 }
 
 void egmde::FullscreenClient::on_new_output(Output const* output)
 {
     {
         std::lock_guard<decltype(outputs_mutex)> lock{outputs_mutex};
-        draw_screen(outputs.insert({output, SurfaceInfo{output}}).first->second);
+
+        mir::geometry::Rectangle const screen_rect{
+                {output->x,    output->y},
+                {output->width,output->height}};
+
+        if (!display_area.bounding_rectangle().overlaps(screen_rect))
+        {
+            display_area.add(screen_rect);
+            draw_screen(outputs.insert({output, SurfaceInfo{output}}).first->second);
+        }
+        else
+        {
+            hidden_outputs.emplace_back(output);
+        }
     }
     wl_display_roundtrip(display);
 }

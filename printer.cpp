@@ -56,7 +56,8 @@ egmde::Printer::Printer()
     if (FT_New_Face(lib, font_file, 0, &face))
     {
         FT_Done_FreeType(lib);
-        throw std::runtime_error{std::string{"WARNING: failed to load titlebar font: \""} +  font_file + "\"\n"};
+        throw std::runtime_error{std::string{"WARNING: failed to load titlebar font: \""} +  font_file + "\"\n"
+            "(Hint: try setting EGMDE_FONT=<path to a font that exists>"};
     }
 }
 

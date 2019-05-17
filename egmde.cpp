@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2018 Octopull Ltd.
+ * Copyright © 2016-2019 Octopull Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -27,13 +27,10 @@
 #include <miral/keymap.h>
 #include <miral/runner.h>
 #include <miral/set_window_management_policy.h>
-#include <miral/version.h>
 #include <miral/wayland_extensions.h>
 
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 4, 0)
 #include <miral/x11_support.h>
 #include <miral/display_configuration.h>
-#endif
 
 #include <linux/input.h>
 
@@ -117,11 +114,9 @@ int main(int argc, char const* argv[])
 
     return runner.run_with(
         {
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 4, 0)
             X11Support{},
             WaylandExtensions{},
             DisplayConfiguration{runner},
-#endif
             CommandLineOption{[&](auto& option) { wallpaper.top(option);},
                               "wallpaper-top",    "Colour of wallpaper RGB", "0x000000"},
             CommandLineOption{[&](auto& option) { wallpaper.bottom(option);},

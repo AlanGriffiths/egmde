@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-18 Octopull Ltd.
+ * Copyright © 2016-19 Octopull Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -19,25 +19,37 @@
 #ifndef EGMDE_EGWINDOWMANAGER_H
 #define EGMDE_EGWINDOWMANAGER_H
 
-#include <miral/canonical_window_manager.h>
+#include <miral/version.h>
+
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 5, 0)
+    #include <miral/minimal_window_manager.h>
+#else
+    #include <miral/canonical_window_manager.h>
+#endif
 
 namespace egmde
 {
 using namespace miral;
 class Wallpaper;
 
-class WindowManagerPolicy : public CanonicalWindowManagerPolicy
+class WindowManagerPolicy :
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 5, 0)
+    public MinimalWindowManager
+#else
+    public CanonicalWindowManagerPolicy
+#endif
 {
 public:
     WindowManagerPolicy(WindowManagerTools const& tools, Wallpaper const& wallpaper);
 
+    auto place_new_window(ApplicationInfo const& app_info, WindowSpecification const& request_parameters)
+        -> WindowSpecification override;
+
+#if MIRAL_VERSION < MIR_VERSION_NUMBER(2, 5, 0)
     // Switch apps  : Alt+Tab
     // Switch window: Alt+`
     // Close window : Alt-F4
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
-
-    WindowSpecification
-    place_new_window(ApplicationInfo const& app_info, WindowSpecification const& request_parameters) override;
 
     // Switch apps  : click on the corresponding window
     // Switch window: click on the corresponding window
@@ -58,10 +70,12 @@ public:
     void handle_request_move(WindowInfo& window_info, MirInputEvent const* input_event) override;
 
     void handle_request_resize(WindowInfo& window_info, MirInputEvent const* input_event, MirResizeEdge edge) override;
+#endif
 
 private:
     Wallpaper const* wallpaper;
 
+#if MIRAL_VERSION < MIR_VERSION_NUMBER(2, 5, 0)
     // State held for move/resize gesture by pointer
     enum PointerGesture {
         pointer_gesture_none,
@@ -83,10 +97,12 @@ private:
     bool pinching = false;
 
     void end_touch_gesture();
+#endif
     void keep_size_within_limits(
         WindowInfo const& window_info, Displacement& delta, Width& new_width, Height& new_height) const;
-
+#if MIRAL_VERSION < MIR_VERSION_NUMBER(2, 5, 0)
     bool begin_pointer_gesture(WindowInfo const& window_info, MirInputEvent const* input_event, PointerGesture gesture);
+#endif
 };
 }
 

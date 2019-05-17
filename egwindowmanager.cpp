@@ -27,6 +27,7 @@
 
 using namespace mir::geometry;
 
+#if MIRAL_VERSION < MIR_VERSION_NUMBER(2, 5, 0)
 namespace
 {
 unsigned int const shift_states =
@@ -331,6 +332,7 @@ void egmde::WindowManagerPolicy::end_touch_gesture()
 
     pinching = false;
 }
+#endif
 
 void egmde::WindowManagerPolicy::keep_size_within_limits(
     WindowInfo const& window_info, Displacement& delta, Width& new_width, Height& new_height) const
@@ -370,6 +372,7 @@ void egmde::WindowManagerPolicy::keep_size_within_limits(
     }
 }
 
+#if MIRAL_VERSION < MIR_VERSION_NUMBER(2, 5, 0)
 Rectangle egmde::WindowManagerPolicy::confirm_placement_on_display(
     WindowInfo const& /*window_info*/, MirWindowState /*new_state*/, Rectangle const& new_placement)
 {
@@ -439,3 +442,25 @@ miral::WindowSpecification egmde::WindowManagerPolicy::place_new_window(
 
     return result;
 }
+
+#else
+
+egmde::WindowManagerPolicy::WindowManagerPolicy(WindowManagerTools const& tools, Wallpaper const& wallpaper) :
+    MinimalWindowManager{tools},
+    wallpaper{&wallpaper}
+{
+}
+
+miral::WindowSpecification egmde::WindowManagerPolicy::place_new_window(
+    miral::ApplicationInfo const& app_info, miral::WindowSpecification const& request_parameters)
+{
+    auto result = MinimalWindowManager::place_new_window(app_info, request_parameters);
+
+    if (app_info.application() == wallpaper->session())
+    {
+        result.type() = mir_window_type_decoration;
+    }
+
+    return result;
+}
+#endif

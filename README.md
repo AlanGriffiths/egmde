@@ -18,6 +18,4 @@ basis for your own project or to offer suggestions via pull requests.
 
 You can try egmde as your desktop, or as a window on your desktop. But remember, it is not a fully functional shell, just a "worked example" of using Mir written to accompany a set of blog posts.
 
-<a href="https://snapcraft.io/egmde" title="Get it from the Snap Store">
-  <img src="https://snapcraft.io/static/images/badges/en/snap-store-white.svg" alt="" />
-</a>
+[![egmde](https://snapcraft.io/egmde/badge.svg)](https://snapcraft.io/egmde)

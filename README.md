@@ -19,3 +19,5 @@ basis for your own project or to offer suggestions via pull requests.
 You can try egmde as your desktop, or as a window on your desktop. But remember, it is not a fully functional shell, just a "worked example" of using Mir written to accompany a set of blog posts.
 
 [![egmde](https://snapcraft.io/egmde/badge.svg)](https://snapcraft.io/egmde)
+
+[![egmde-confined-desktop](https://snapcraft.io/egmde-confined-desktop/badge.svg)](https://snapcraft.io/egmde-confined-desktop)

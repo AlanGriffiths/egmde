@@ -13,7 +13,6 @@ pkg_check_modules(MIRAL miral REQUIRED)
 add_executable(egmde
     egmde.cpp
     egwallpaper.cpp egwallpaper.h
-    egwindowmanager.cpp egwindowmanager.h
 )
 
 target_include_directories(egmde PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
@@ -23,6 +22,6 @@ add_custom_target(egmde-desktop ALL
     cp ${CMAKE_CURRENT_SOURCE_DIR}/egmde-desktop.sh ${CMAKE_BINARY_DIR}/egmde-desktop
 )
 
-install(PROGRAMS ${CMAKE_BINARY_DIR}/egmde-desktop
+install(PROGRAMS ${CMAKE_BINARY_DIR}/egmde ${CMAKE_BINARY_DIR}/egmde-desktop
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )

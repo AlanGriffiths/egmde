@@ -37,8 +37,11 @@ int main(int argc, char const* argv[])
 
     return runner.run_with(
         {
-            CommandLineOption{std::ref(wallpaper), "wallpaper", "Colour of wallpaper RGB", "0x92006a"},
-            StartupInternalClient{"wallpaper", std::ref(wallpaper)},
+            CommandLineOption{[&](auto& option) { wallpaper.top(option);},
+                              "wallpaper-top",    "Colour of wallpaper RGB", "0x000000"},
+            CommandLineOption{[&](auto& option) { wallpaper.bottom(option);},
+                              "wallpaper-bottom", "Colour of wallpaper RGB", EGMDE_WALLPAPER_BOTTOM},
+            StartupInternalClient{std::ref(wallpaper)},
             Keymap{},
             set_window_management_policy<miral::MinimalWindowManager>()
         });

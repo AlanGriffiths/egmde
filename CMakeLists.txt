@@ -9,14 +9,37 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,defs")
 
 include(FindPkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
+pkg_check_modules(FREETYPE freetype2 REQUIRED)
+pkg_check_modules(WAYLAND_CLIENT REQUIRED wayland-client)
+pkg_check_modules(XKBCOMMON xkbcommon REQUIRED)
 
 add_executable(egmde
     egmde.cpp
     egwallpaper.cpp egwallpaper.h
+    printer.cpp printer.h
+    egfullscreenclient.cpp egfullscreenclient.h
 )
 
-target_include_directories(egmde PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
-target_link_libraries(egmde ${MIRAL_LDFLAGS})
+execute_process(
+    COMMAND grep ^NAME= /etc/os-release
+    COMMAND cut -d= -f2
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    OUTPUT_VARIABLE EGMDE_OS)
+
+
+if (EGMDE_OS STREQUAL "Ubuntu")
+  set(EGMDE_WALLPAPER_BOTTOM 0x92006a)
+elseif (EGMDE_OS STREQUAL "Fedora")
+  set(EGMDE_WALLPAPER_BOTTOM 0x25487c)
+else()
+  set(EGMDE_WALLPAPER_BOTTOM 0x92006a)
+endif()
+
+set_source_files_properties(egmde.cpp PROPERTIES COMPILE_DEFINITIONS EGMDE_WALLPAPER_BOTTOM="${EGMDE_WALLPAPER_BOTTOM}")
+
+target_include_directories(egmde PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
+target_link_libraries(     egmde               ${MIRAL_LDFLAGS}      ${WAYLAND_CLIENT_LIBRARIES}  ${Boost_LIBRARIES}    ${FREETYPE_LIBRARIES})
+target_link_libraries(     egmde               ${XKBCOMMON_LIBRARIES})
 
 add_custom_target(egmde-desktop ALL
     cp ${CMAKE_CURRENT_SOURCE_DIR}/egmde-desktop.sh ${CMAKE_BINARY_DIR}/egmde-desktop

@@ -17,189 +17,160 @@
  */
 
 #include "egwallpaper.h"
-
-#include <mir/client/display_config.h>
-#include <mir/client/window_spec.h>
-
-#include <mir_toolkit/mir_buffer_stream.h>
+#include "printer.h"
+#include "egfullscreenclient.h"
 
 #include <algorithm>
 #include <cstring>
 #include <sstream>
 
-
-using namespace mir::client;
-
 namespace
 {
-void render_gradient(MirGraphicsRegion* region, uint8_t* colour)
+void render_gradient(int32_t width, int32_t height, unsigned char* row_, uint8_t* bottom_colour, uint8_t* top_colour)
 {
-    char* row = region->vaddr;
-
-    for (int j = 0; j < region->height; j++)
+    auto row = row_;
+    for (int j = 0; j < height; j++)
     {
         auto* pixel = (uint32_t*)row;
         uint8_t pattern_[4];
         for (auto i = 0; i != 3; ++i)
-            pattern_[i] = (j*colour[i])/region->height;
-        pattern_[3] = colour[3];
+            pattern_[i] = (j*bottom_colour[i] + (height - j) * top_colour[i]) / height;
+        pattern_[3] = 0xff;
 
-        for (int i = 0; i < region->width; i++)
+        for (int i = 0; i < width; i++)
             memcpy(pixel + i, pattern_, sizeof pixel[i]);
 
-        row += region->stride;
+        row += 4*width;
     }
+
+    static egmde::Printer printer;
+
+    printer.footer(width, height, row_, {"Ctrl-Alt-A = app launcher | Ctrl-Alt-BkSp = quit"});
 }
 }
 
-void egmde::Wallpaper::start(Connection connection)
+struct egmde::Wallpaper::Self : egmde::FullscreenClient
 {
+    Self(wl_display* display, uint8_t* bottom_colour, uint8_t* top_colour);
+
+    void draw_screen(SurfaceInfo& info) const override;
+
+    uint8_t* const bottom_colour;
+    uint8_t* const top_colour;
+};
+
+void egmde::Wallpaper::Self::draw_screen(SurfaceInfo& info) const
+{
+    bool const rotated = info.output->transform & WL_OUTPUT_TRANSFORM_90;
+    auto const width = rotated ? info.output->height : info.output->width;
+    auto const height = rotated ? info.output->width : info.output->height;
+
+    if (width <= 0 || height <= 0)
+        return;
+
+    auto const stride = 4*width;
+
+    if (!info.surface)
     {
-        std::lock_guard<decltype(mutex)> lock{mutex};
-        this->connection = std::move(connection);
+        info.surface = wl_compositor_create_surface(compositor);
     }
 
-    enqueue_work([this]{ create_window(); });
-    start_work();
+    if (!info.shell_surface)
+    {
+        info.shell_surface = wl_shell_get_shell_surface(shell, info.surface);
+        wl_shell_surface_set_fullscreen(
+            info.shell_surface,
+            WL_SHELL_SURFACE_FULLSCREEN_METHOD_DEFAULT,
+            0,
+            info.output->output);
+    }
+
+    if (info.buffer)
+    {
+        wl_buffer_destroy(info.buffer);
+    }
+
+    {
+        auto const shm_pool = make_shm_pool(stride * height, &info.content_area);
+
+        info.buffer = wl_shm_pool_create_buffer(
+            shm_pool.get(),
+            0,
+            width, height, stride,
+            WL_SHM_FORMAT_ARGB8888);
+    }
+
+    render_gradient(width, height, static_cast<unsigned char*>(info.content_area), bottom_colour, top_colour);
+
+    wl_surface_attach(info.surface, info.buffer, 0, 0);
+    wl_surface_commit(info.surface);
+}
+
+egmde::Wallpaper::Self::Self(wl_display* display, uint8_t* bottom_colour, uint8_t* top_colour) :
+    FullscreenClient(display),
+    bottom_colour{bottom_colour},
+    top_colour{top_colour}
+{
+    wl_display_roundtrip(display);
+    wl_display_roundtrip(display);
 }
 
 void egmde::Wallpaper::stop()
 {
+    if (auto ss = self.lock())
     {
         std::lock_guard<decltype(mutex)> lock{mutex};
-        window.reset();
-        surface.reset();
-        connection.reset();
-    }
-    stop_work();
-}
-
-void egmde::Wallpaper::handle_event(MirWindow* window, MirEvent const* event, void* context)
-{
-    static_cast<Wallpaper*>(context)->handle_event(window, event);
-}
-
-void egmde::Wallpaper::create_window()
-{
-    unsigned width = 0;
-    unsigned height = 0;
-
-    DisplayConfig{connection}.for_each_output([&width, &height](MirOutput const* output)
-    {
-        if (!mir_output_is_enabled(output))
-            return;
-
-         width = std::max(width, mir_output_get_logical_width(output));
-         height = std::max(height, mir_output_get_logical_height(output));
-    });
-    
-    std::lock_guard<decltype(mutex)> lock{mutex};
-
-    surface = Surface{mir_connection_create_render_surface_sync(connection, width, height)};
-
-    buffer_stream = mir_render_surface_get_buffer_stream(surface, width, height, mir_pixel_format_xrgb_8888);
-
-    window = WindowSpec::for_gloss(connection, width, height)
-        .set_name("wallpaper")
-        .set_fullscreen_on_output(0)
-        .set_event_handler(&handle_event, this)
-        .add_surface(surface, width, height, 0, 0)
-        .create_window();
-
-    MirGraphicsRegion graphics_region;
-
-    mir_buffer_stream_get_graphics_region(buffer_stream, &graphics_region);
-
-    render_gradient(&graphics_region, colour);
-    mir_buffer_stream_swap_buffers_sync(buffer_stream);
-}
-
-void egmde::Wallpaper::handle_event(MirWindow* window, MirEvent const* ev)
-{
-    switch (mir_event_get_type(ev))
-    {
-        case mir_event_type_resize:
-        {
-            MirResizeEvent const* resize = mir_event_get_resize_event(ev);
-            int const new_width = mir_resize_event_get_width(resize);
-            int const new_height = mir_resize_event_get_height(resize);
-
-            enqueue_work([window, new_width, new_height, this]()
-            {
-                mir_buffer_stream_set_size(buffer_stream, new_width, new_height);
-                mir_render_surface_set_size(surface, new_width, new_height);
-
-                WindowSpec::for_changes(connection)
-                    .add_surface(surface, new_width, new_height, 0, 0)
-                    .apply_to(window);
-
-                MirGraphicsRegion graphics_region;
-
-                // We expect a buffer of the right size so we shouldn't need to limit repaints
-                // but we also to avoid an infinite loop.
-                int repaint_limit = 3;
-
-                do
-                {
-                    mir_buffer_stream_get_graphics_region(buffer_stream, &graphics_region);
-                    render_gradient(&graphics_region, colour);
-                }
-                while ((new_width != graphics_region.width || new_height != graphics_region.height)
-                       && --repaint_limit != 0);
-            });
-            break;
-        }
-
-        default:
-            break;
+        ss->stop();
+        ss.reset();
     }
 }
 
-void egmde::Wallpaper::operator()(std::string const& option)
+
+void egmde::Wallpaper::bottom(std::string const& option)
 {
     uint32_t value;
     std::stringstream interpreter{option};
 
     if (interpreter >> std::hex >> value)
     {
-        colour[0] = value & 0xff;
-        colour[1] = (value >> 8) & 0xff;
-        colour[2] = (value >> 16) & 0xff;
+        bottom_colour[0] = value & 0xff;
+        bottom_colour[1] = (value >> 8) & 0xff;
+        bottom_colour[2] = (value >> 16) & 0xff;
     }
 }
 
-
-egmde::Worker::~Worker() = default;
-
-void egmde::Worker::do_work()
+void egmde::Wallpaper::top(std::string const& option)
 {
-    while (!work_done)
+    uint32_t value;
+    std::stringstream interpreter{option};
+
+    if (interpreter >> std::hex >> value)
     {
-        WorkQueue::value_type work;
-        {
-            std::unique_lock<decltype(work_mutex)> lock{work_mutex};
-            work_cv.wait(lock, [this] { return !work_queue.empty(); });
-            work = work_queue.front();
-            work_queue.pop();
-        }
-
-        work();
+        top_colour[0] = value & 0xff;
+        top_colour[1] = (value >> 8) & 0xff;
+        top_colour[2] = (value >> 16) & 0xff;
     }
 }
 
-void egmde::Worker::enqueue_work(std::function<void()> const& functor)
+void egmde::Wallpaper::operator()(wl_display* display)
 {
-    std::lock_guard<decltype(work_mutex)> lock{work_mutex};
-    work_queue.push(functor);
-    work_cv.notify_one();
+    auto client = std::make_shared<Self>(display, bottom_colour, top_colour);
+    self = client;
+    client->run(display);
+
+    // Possibly need to wait for stop() to release the client.
+    // (This would be less ugly with a ref-counted wrapper for wl_display* in the miral API)
+    std::lock_guard<decltype(mutex)> lock{mutex};
 }
 
-void egmde::Worker::start_work()
+void egmde::Wallpaper::operator()(std::weak_ptr<mir::scene::Session> const& session)
 {
-    do_work();
+    std::lock_guard<decltype(mutex)> lock{mutex};
+    weak_session = session;
 }
 
-void egmde::Worker::stop_work()
+auto egmde::Wallpaper::session() const -> std::shared_ptr<mir::scene::Session>
 {
-    enqueue_work([this] { work_done = true; });
+    std::lock_guard<decltype(mutex)> lock{mutex};
+    return weak_session.lock();
 }

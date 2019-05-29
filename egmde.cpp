@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2018 Octopull Ltd.
+ * Copyright © 2016-2019 Octopull Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -16,9 +16,8 @@
  * Authored by: Alan Griffiths <alan@octopull.co.uk>
  */
 
-#include "egwindowmanager.h"
-
 #include <miral/runner.h>
+#include <miral/minimal_window_manager.h>
 #include <miral/set_window_management_policy.h>
 
 using namespace miral;
@@ -29,6 +28,6 @@ int main(int argc, char const* argv[])
 
     return runner.run_with(
         {
-            set_window_management_policy<egmde::WindowManagerPolicy>()
+            set_window_management_policy<miral::MinimalWindowManager>()
         });
 }

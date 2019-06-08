@@ -32,7 +32,4 @@ then
     exit 1
 fi
 
-${bindir}egmde --wayland-socket-name ${wayland_display} --arw-file --no-file $*&
-trap "killall -w ${bindir}egmde" EXIT
-while [ ! -e "${XDG_RUNTIME_DIR}/${wayland_display}" ]; do echo "waiting for ${XDG_RUNTIME_DIR}/${wayland_display}"; sleep 1 ;done
-XDG_SESSION_TYPE=wayland GDK_BACKEND=wayland QT_QPA_PLATFORM=wayland SDL_VIDEODRIVER=wayland WAYLAND_DISPLAY=${wayland_display} NO_AT_BRIDGE=1 dbus-run-session -- ${launcher}
+exec $(realpath ${bindir}egmde) --wayland-socket-name ${wayland_display} --no-file --startup ${launcher}

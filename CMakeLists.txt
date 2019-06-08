@@ -24,3 +24,7 @@ add_custom_target(egmde-desktop ALL
 install(PROGRAMS ${CMAKE_BINARY_DIR}/egmde ${CMAKE_BINARY_DIR}/egmde-desktop
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
+
+install(FILES ${CMAKE_SOURCE_DIR}/egmde.desktop
+    DESTINATION /usr/share/wayland-sessions/
+)

@@ -19,6 +19,7 @@
 #include <miral/runner.h>
 #include <miral/append_event_filter.h>
 #include <miral/external_client.h>
+#include <miral/keymap.h>
 #include <miral/minimal_window_manager.h>
 #include <miral/set_window_management_policy.h>
 
@@ -68,6 +69,7 @@ int main(int argc, char const* argv[])
         {
             set_window_management_policy<MinimalWindowManager>(),
             external_client_launcher,
-            AppendEventFilter{keyboard_shortcuts}
+            AppendEventFilter{keyboard_shortcuts},
+            Keymap{},
         });
 }

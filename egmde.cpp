@@ -18,6 +18,7 @@
 
 #include <miral/runner.h>
 #include <miral/append_event_filter.h>
+#include <miral/external_client.h>
 #include <miral/minimal_window_manager.h>
 #include <miral/set_window_management_policy.h>
 
@@ -28,6 +29,8 @@ using namespace miral;
 int main(int argc, char const* argv[])
 {
     MirRunner runner{argc, argv};
+
+    ExternalClientLauncher external_client_launcher;
 
     auto const keyboard_shortcuts = [&](MirEvent const* event)
         {
@@ -52,6 +55,10 @@ int main(int argc, char const* argv[])
                 runner.stop();
                 return true;
 
+            case KEY_T:
+                external_client_launcher.launch({"weston-terminal"});
+                return true;
+
             default:
                 return false;
             }
@@ -60,6 +67,7 @@ int main(int argc, char const* argv[])
     return runner.run_with(
         {
             set_window_management_policy<MinimalWindowManager>(),
+            external_client_launcher,
             AppendEventFilter{keyboard_shortcuts}
         });
 }

@@ -17,14 +17,14 @@ add_executable(egmde
 target_include_directories(egmde PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
 target_link_libraries(egmde ${MIRAL_LDFLAGS})
 
-add_custom_target(egmde-desktop ALL
-    cp ${CMAKE_CURRENT_SOURCE_DIR}/egmde-desktop.sh ${CMAKE_BINARY_DIR}/egmde-desktop
-)
-
-install(PROGRAMS ${CMAKE_BINARY_DIR}/egmde ${CMAKE_BINARY_DIR}/egmde-desktop
+install(PROGRAMS ${CMAKE_BINARY_DIR}/egmde
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
 
 install(FILES ${CMAKE_SOURCE_DIR}/egmde.desktop
     DESTINATION /usr/share/wayland-sessions/
+)
+
+install(FILES ${CMAKE_SOURCE_DIR}/egmde.desktop
+    DESTINATION /usr/share/applications/
 )

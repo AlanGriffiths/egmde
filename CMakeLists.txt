@@ -33,6 +33,7 @@ add_executable(egmde
     egshellcommands.cpp egshellcommands.h
     wayland-generated/primary-selection-unstable-v1_wrapper.cpp
     wayland-generated/primary-selection-unstable-v1_wrapper.h
+    primary_selection.cpp primary_selection.h
 )
 
 execute_process(

@@ -33,7 +33,10 @@ add_executable(egmde
     egshellcommands.cpp egshellcommands.h
     wayland-generated/primary-selection-unstable-v1_wrapper.cpp
     wayland-generated/primary-selection-unstable-v1_wrapper.h
+    wayland-generated/gtk-primary-selection_wrapper.cpp
+    wayland-generated/gtk-primary-selection_wrapper.h
     primary_selection.cpp primary_selection.h
+    gtk_primary_selection.cpp gtk_primary_selection.h
 )
 
 execute_process(
@@ -53,7 +56,7 @@ endif()
 
 set_source_files_properties(egmde.cpp PROPERTIES COMPILE_DEFINITIONS EGMDE_WALLPAPER_BOTTOM="${EGMDE_WALLPAPER_BOTTOM}")
 
-target_include_directories(egmde PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS} ${MIRCOMMON_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
+target_include_directories(egmde PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS} /usr/include/mirwayland/ ${MIRCOMMON_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
 target_link_libraries(egmde
   ${MIRAL_LDFLAGS}
   ${MIRWAYLAND_LDFLAGS}

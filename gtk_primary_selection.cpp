@@ -24,11 +24,6 @@
 using namespace mir::wayland;
 using namespace miral;
 
-// Workaround https://github.com/MirServer/mir/issues/871
-namespace mir { namespace wayland {
-extern struct wl_interface const gtk_primary_selection_offer_interface_data;
-}}
-
 namespace
 {
 class PrimarySelectionDeviceManager : public GtkPrimarySelectionDeviceManager
@@ -83,7 +78,7 @@ public:
 
 public:
     PrimarySelectionOffer(
-        struct wl_resource* resource,
+        GtkPrimarySelectionDevice const& parent,
         egmde::PrimarySelectionDeviceController::Source* source,
         egmde::PrimarySelectionDeviceController* controller);
 
@@ -145,7 +140,7 @@ void PrimarySelectionDeviceManager::destroy()
 
 PrimarySelectionDeviceManager::PrimarySelectionDeviceManager(
     struct wl_resource* resource, egmde::PrimarySelectionDeviceController* controller) :
-    GtkPrimarySelectionDeviceManager(resource),
+    GtkPrimarySelectionDeviceManager(resource, Version<1>{}),
     controller{controller}
 {
 }
@@ -171,7 +166,7 @@ void PrimarySelectionDevice::destroy()
 PrimarySelectionDevice::PrimarySelectionDevice(
     struct wl_resource* resource,
     egmde::PrimarySelectionDeviceController* controller) :
-    GtkPrimarySelectionDevice(resource),
+    GtkPrimarySelectionDevice(resource, Version<1>{}),
     controller{controller}
 {
     controller->add(this);
@@ -199,10 +194,10 @@ void PrimarySelectionDevice::select(egmde::PrimarySelectionDeviceController::Off
 }
 
 PrimarySelectionOffer::PrimarySelectionOffer(
-    struct wl_resource* resource,
+    GtkPrimarySelectionDevice const& parent,
     egmde::PrimarySelectionDeviceController::Source* source,
     egmde::PrimarySelectionDeviceController* controller) :
-    GtkPrimarySelectionOffer(resource),
+    GtkPrimarySelectionOffer(parent),
     source{source},
     controller{controller}
 {
@@ -248,7 +243,7 @@ void PrimarySelectionSource::destroy()
 PrimarySelectionSource::PrimarySelectionSource(
     struct wl_resource* resource,
     egmde::PrimarySelectionDeviceController* controller) :
-    GtkPrimarySelectionSource(resource),
+    GtkPrimarySelectionSource(resource, Version<1>{}),
     controller{controller}
 {
 }
@@ -261,13 +256,9 @@ void PrimarySelectionSource::cancelled()
 
 void PrimarySelectionSource::create_offer_for(egmde::PrimarySelectionDeviceController::Device* device)
 {
-    wl_resource* new_resource = wl_resource_create(
-        device->client(),
-        &mir::wayland::gtk_primary_selection_offer_interface_data,
-        wl_resource_get_version(device->resource()),
-        0);
+    auto parent = dynamic_cast<PrimarySelectionDevice*>(device);
 
-    auto const offer = new PrimarySelectionOffer{new_resource, this, controller};
+    auto const offer = new PrimarySelectionOffer{*parent, this, controller};
     disclose(device, offer);
 }
 
@@ -282,7 +273,7 @@ void PrimarySelectionSource::receive(std::string const& mime_type, mir::Fd fd)
 }
 
 MyGlobal::MyGlobal(wl_display* display) :
-    GtkPrimarySelectionDeviceManager::Global(display, 1)
+    GtkPrimarySelectionDeviceManager::Global(display, Version<1>{})
 {
 }
 

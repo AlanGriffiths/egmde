@@ -14,26 +14,6 @@
 
 #include "mir/log.h"
 
-namespace
-{
-void internal_error_processing_request(struct wl_client* client, std::string const& method_name)
-{
-#if (WAYLAND_VERSION_MAJOR > 1 || (WAYLAND_VERSION_MAJOR == 1 && WAYLAND_VERSION_MINOR > 16))
-    wl_client_post_implementation_error(
-        client,
-        "Mir internal error processing %s request",
-        method_name.c_str());
-#else
-    wl_client_post_no_memory(client);
-#endif
-    ::mir::log(
-        ::mir::logging::Severity::error,
-        "frontend:Wayland",
-        std::current_exception(),
-        "Exception processing " + method_name + " request");
-}
-}
-
 namespace mir
 {
 namespace wayland
@@ -68,6 +48,8 @@ mw::GtkPrimarySelectionDeviceManager* mw::GtkPrimarySelectionDeviceManager::from
 
 struct mw::GtkPrimarySelectionDeviceManager::Thunks
 {
+    static int const supported_version;
+
     static void create_source_thunk(struct wl_client* client, struct wl_resource* resource, uint32_t id)
     {
         auto me = static_cast<GtkPrimarySelectionDeviceManager*>(wl_resource_get_user_data(resource));
@@ -132,7 +114,7 @@ struct mw::GtkPrimarySelectionDeviceManager::Thunks
         auto resource = wl_resource_create(
             client,
             &gtk_primary_selection_device_manager_interface_data,
-            std::min(version, me->max_version),
+            std::min((int)version, Thunks::supported_version),
             id);
         if (resource == nullptr)
         {
@@ -155,7 +137,9 @@ struct mw::GtkPrimarySelectionDeviceManager::Thunks
     static void const* request_vtable[];
 };
 
-mw::GtkPrimarySelectionDeviceManager::GtkPrimarySelectionDeviceManager(struct wl_resource* resource)
+int const mw::GtkPrimarySelectionDeviceManager::Thunks::supported_version = 1;
+
+mw::GtkPrimarySelectionDeviceManager::GtkPrimarySelectionDeviceManager(struct wl_resource* resource, Version<1>)
     : client{wl_resource_get_client(resource)},
       resource{resource}
 {
@@ -176,24 +160,19 @@ void mw::GtkPrimarySelectionDeviceManager::destroy_wayland_object() const
     wl_resource_destroy(resource);
 }
 
-mw::GtkPrimarySelectionDeviceManager::Global::Global(wl_display* display, uint32_t max_version)
-    : global{wl_global_create(
-        display,
-        &gtk_primary_selection_device_manager_interface_data,
-        max_version,
-        this,
-        &Thunks::bind_thunk)},
-      max_version{max_version}
-{
-    if (global == nullptr)
-    {
-        BOOST_THROW_EXCEPTION((std::runtime_error{"Failed to export gtk_primary_selection_device_manager interface"}));
-    }
-}
+mw::GtkPrimarySelectionDeviceManager::Global::Global(wl_display* display, Version<1>)
+    : wayland::Global{
+          wl_global_create(
+              display,
+              &gtk_primary_selection_device_manager_interface_data,
+              Thunks::supported_version,
+              this,
+              &Thunks::bind_thunk)}
+{}
 
-mw::GtkPrimarySelectionDeviceManager::Global::~Global()
+auto mw::GtkPrimarySelectionDeviceManager::Global::interface_name() const -> char const*
 {
-    wl_global_destroy(global);
+    return GtkPrimarySelectionDeviceManager::interface_name;
 }
 
 struct wl_interface const* mw::GtkPrimarySelectionDeviceManager::Thunks::create_source_types[] {
@@ -222,6 +201,8 @@ mw::GtkPrimarySelectionDevice* mw::GtkPrimarySelectionDevice::from(struct wl_res
 
 struct mw::GtkPrimarySelectionDevice::Thunks
 {
+    static int const supported_version;
+
     static void set_selection_thunk(struct wl_client* client, struct wl_resource* resource, struct wl_resource* source, uint32_t serial)
     {
         auto me = static_cast<GtkPrimarySelectionDevice*>(wl_resource_get_user_data(resource));
@@ -266,7 +247,9 @@ struct mw::GtkPrimarySelectionDevice::Thunks
     static void const* request_vtable[];
 };
 
-mw::GtkPrimarySelectionDevice::GtkPrimarySelectionDevice(struct wl_resource* resource)
+int const mw::GtkPrimarySelectionDevice::Thunks::supported_version = 1;
+
+mw::GtkPrimarySelectionDevice::GtkPrimarySelectionDevice(struct wl_resource* resource, Version<1>)
     : client{wl_resource_get_client(resource)},
       resource{resource}
 {
@@ -333,6 +316,8 @@ mw::GtkPrimarySelectionOffer* mw::GtkPrimarySelectionOffer::from(struct wl_resou
 
 struct mw::GtkPrimarySelectionOffer::Thunks
 {
+    static int const supported_version;
+
     static void receive_thunk(struct wl_client* client, struct wl_resource* resource, char const* mime_type, int32_t fd)
     {
         auto me = static_cast<GtkPrimarySelectionOffer*>(wl_resource_get_user_data(resource));
@@ -370,9 +355,11 @@ struct mw::GtkPrimarySelectionOffer::Thunks
     static void const* request_vtable[];
 };
 
-mw::GtkPrimarySelectionOffer::GtkPrimarySelectionOffer(struct wl_resource* resource)
-    : client{wl_resource_get_client(resource)},
-      resource{resource}
+int const mw::GtkPrimarySelectionOffer::Thunks::supported_version = 1;
+
+mw::GtkPrimarySelectionOffer::GtkPrimarySelectionOffer(GtkPrimarySelectionDevice const& parent)
+    : client{wl_resource_get_client(parent.resource)},
+      resource{wl_resource_create(client, &gtk_primary_selection_offer_interface_data, wl_resource_get_version(parent.resource), 0)}
 {
     if (resource == nullptr)
     {
@@ -417,6 +404,8 @@ mw::GtkPrimarySelectionSource* mw::GtkPrimarySelectionSource::from(struct wl_res
 
 struct mw::GtkPrimarySelectionSource::Thunks
 {
+    static int const supported_version;
+
     static void offer_thunk(struct wl_client* client, struct wl_resource* resource, char const* mime_type)
     {
         auto me = static_cast<GtkPrimarySelectionSource*>(wl_resource_get_user_data(resource));
@@ -453,7 +442,9 @@ struct mw::GtkPrimarySelectionSource::Thunks
     static void const* request_vtable[];
 };
 
-mw::GtkPrimarySelectionSource::GtkPrimarySelectionSource(struct wl_resource* resource)
+int const mw::GtkPrimarySelectionSource::Thunks::supported_version = 1;
+
+mw::GtkPrimarySelectionSource::GtkPrimarySelectionSource(struct wl_resource* resource, Version<1>)
     : client{wl_resource_get_client(resource)},
       resource{resource}
 {
@@ -505,25 +496,25 @@ namespace wayland
 
 struct wl_interface const gtk_primary_selection_device_manager_interface_data {
     mw::GtkPrimarySelectionDeviceManager::interface_name,
-    mw::GtkPrimarySelectionDeviceManager::interface_version,
+    mw::GtkPrimarySelectionDeviceManager::Thunks::supported_version,
     3, mw::GtkPrimarySelectionDeviceManager::Thunks::request_messages,
     0, nullptr};
 
 struct wl_interface const gtk_primary_selection_device_interface_data {
     mw::GtkPrimarySelectionDevice::interface_name,
-    mw::GtkPrimarySelectionDevice::interface_version,
+    mw::GtkPrimarySelectionDevice::Thunks::supported_version,
     2, mw::GtkPrimarySelectionDevice::Thunks::request_messages,
     2, mw::GtkPrimarySelectionDevice::Thunks::event_messages};
 
 struct wl_interface const gtk_primary_selection_offer_interface_data {
     mw::GtkPrimarySelectionOffer::interface_name,
-    mw::GtkPrimarySelectionOffer::interface_version,
+    mw::GtkPrimarySelectionOffer::Thunks::supported_version,
     2, mw::GtkPrimarySelectionOffer::Thunks::request_messages,
     1, mw::GtkPrimarySelectionOffer::Thunks::event_messages};
 
 struct wl_interface const gtk_primary_selection_source_interface_data {
     mw::GtkPrimarySelectionSource::interface_name,
-    mw::GtkPrimarySelectionSource::interface_version,
+    mw::GtkPrimarySelectionSource::Thunks::supported_version,
     2, mw::GtkPrimarySelectionSource::Thunks::request_messages,
     2, mw::GtkPrimarySelectionSource::Thunks::event_messages};
 

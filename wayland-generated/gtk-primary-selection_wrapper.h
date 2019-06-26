@@ -13,20 +13,26 @@
 #include "mir/fd.h"
 #include <wayland-server-core.h>
 
+#include "mir/wayland/wayland_base.h"
+
 namespace mir
 {
 namespace wayland
 {
 
-class GtkPrimarySelectionDeviceManager
+class GtkPrimarySelectionDeviceManager;
+class GtkPrimarySelectionDevice;
+class GtkPrimarySelectionOffer;
+class GtkPrimarySelectionSource;
+
+class GtkPrimarySelectionDeviceManager : public Resource
 {
 public:
     static char const constexpr* interface_name = "gtk_primary_selection_device_manager";
-    static int const interface_version = 1;
 
     static GtkPrimarySelectionDeviceManager* from(struct wl_resource*);
 
-    GtkPrimarySelectionDeviceManager(struct wl_resource* resource);
+    GtkPrimarySelectionDeviceManager(struct wl_resource* resource, Version<1>);
     virtual ~GtkPrimarySelectionDeviceManager() = default;
 
     void destroy_wayland_object() const;
@@ -38,14 +44,12 @@ public:
 
     static bool is_instance(wl_resource* resource);
 
-    class Global
+    class Global : public wayland::Global
     {
     public:
-        Global(wl_display* display, uint32_t max_version);
-        virtual ~Global();
+        Global(wl_display* display, Version<1>);
 
-        wl_global* const global;
-        uint32_t const max_version;
+        auto interface_name() const -> char const* override;
 
     private:
         virtual void bind(wl_resource* new_gtk_primary_selection_device_manager) = 0;
@@ -58,15 +62,14 @@ private:
     virtual void destroy() = 0;
 };
 
-class GtkPrimarySelectionDevice
+class GtkPrimarySelectionDevice : public Resource
 {
 public:
     static char const constexpr* interface_name = "gtk_primary_selection_device";
-    static int const interface_version = 1;
 
     static GtkPrimarySelectionDevice* from(struct wl_resource*);
 
-    GtkPrimarySelectionDevice(struct wl_resource* resource);
+    GtkPrimarySelectionDevice(struct wl_resource* resource, Version<1>);
     virtual ~GtkPrimarySelectionDevice() = default;
 
     void send_data_offer_event(struct wl_resource* offer) const;
@@ -92,15 +95,14 @@ private:
     virtual void destroy() = 0;
 };
 
-class GtkPrimarySelectionOffer
+class GtkPrimarySelectionOffer : public Resource
 {
 public:
     static char const constexpr* interface_name = "gtk_primary_selection_offer";
-    static int const interface_version = 1;
 
     static GtkPrimarySelectionOffer* from(struct wl_resource*);
 
-    GtkPrimarySelectionOffer(struct wl_resource* resource);
+    GtkPrimarySelectionOffer(GtkPrimarySelectionDevice const& parent);
     virtual ~GtkPrimarySelectionOffer() = default;
 
     void send_offer_event(std::string const& mime_type) const;
@@ -124,15 +126,14 @@ private:
     virtual void destroy() = 0;
 };
 
-class GtkPrimarySelectionSource
+class GtkPrimarySelectionSource : public Resource
 {
 public:
     static char const constexpr* interface_name = "gtk_primary_selection_source";
-    static int const interface_version = 1;
 
     static GtkPrimarySelectionSource* from(struct wl_resource*);
 
-    GtkPrimarySelectionSource(struct wl_resource* resource);
+    GtkPrimarySelectionSource(struct wl_resource* resource, Version<1>);
     virtual ~GtkPrimarySelectionSource() = default;
 
     void send_send_event(std::string const& mime_type, mir::Fd fd) const;

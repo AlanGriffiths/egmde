@@ -24,11 +24,6 @@
 using namespace mir::wayland;
 using namespace miral;
 
-// Workaround https://github.com/MirServer/mir/issues/871
-namespace mir { namespace wayland {
-extern struct wl_interface const zwp_primary_selection_offer_v1_interface_data;
-}}
-
 namespace
 {
 class PrimarySelectionDeviceManager : public PrimarySelectionDeviceManagerV1
@@ -83,7 +78,7 @@ public:
 
 public:
     PrimarySelectionOffer(
-        struct wl_resource* resource,
+        PrimarySelectionDevice const& parent,
         egmde::PrimarySelectionDeviceController::Source* source,
         egmde::PrimarySelectionDeviceController* controller);
 
@@ -121,10 +116,10 @@ private:
     std::vector<egmde::PrimarySelectionDeviceController::Offer*> offers;
 };
 
-class Global : public PrimarySelectionDeviceManagerV1::Global, egmde::PrimarySelectionDeviceController
+class MyGlobal : public PrimarySelectionDeviceManagerV1::Global, egmde::PrimarySelectionDeviceController
 {
 public:
-    explicit Global(wl_display* display);
+    explicit MyGlobal(wl_display* display);
 
 private:
     void bind(wl_resource* new_zwp_primary_selection_device_manager_v1) override;
@@ -148,7 +143,7 @@ void PrimarySelectionDeviceManager::destroy()
 
 PrimarySelectionDeviceManager::PrimarySelectionDeviceManager(
     struct wl_resource* resource, egmde::PrimarySelectionDeviceController* controller) :
-    PrimarySelectionDeviceManagerV1(resource),
+    PrimarySelectionDeviceManagerV1(resource, Version<1>{}),
     controller{controller}
 {
 }
@@ -174,7 +169,7 @@ void PrimarySelectionDevice::destroy()
 PrimarySelectionDevice::PrimarySelectionDevice(
     struct wl_resource* resource,
     egmde::PrimarySelectionDeviceController* controller) :
-    PrimarySelectionDeviceV1(resource),
+    PrimarySelectionDeviceV1(resource, Version<1>{}),
     controller{controller}
 {
     controller->add(this);
@@ -202,10 +197,10 @@ void PrimarySelectionDevice::select(egmde::PrimarySelectionDeviceController::Off
 }
 
 PrimarySelectionOffer::PrimarySelectionOffer(
-    struct wl_resource* resource,
+    PrimarySelectionDevice const& parent,
     egmde::PrimarySelectionDeviceController::Source* source,
     egmde::PrimarySelectionDeviceController* controller) :
-    PrimarySelectionOfferV1(resource),
+    PrimarySelectionOfferV1(parent),
     source{source},
     controller{controller}
 {
@@ -251,7 +246,7 @@ void PrimarySelectionSource::destroy()
 PrimarySelectionSource::PrimarySelectionSource(
     struct wl_resource* resource,
     egmde::PrimarySelectionDeviceController* controller) :
-    PrimarySelectionSourceV1(resource),
+    PrimarySelectionSourceV1(resource, Version<1>{}),
     controller{controller}
 {
 }
@@ -264,13 +259,8 @@ void PrimarySelectionSource::cancelled()
 
 void PrimarySelectionSource::create_offer_for(egmde::PrimarySelectionDeviceController::Device* device)
 {
-    wl_resource* new_resource = wl_resource_create(
-        device->client(),
-        &mir::wayland::zwp_primary_selection_offer_v1_interface_data,
-        wl_resource_get_version(device->resource()),
-        0);
-
-    auto const offer = new PrimarySelectionOffer{new_resource, this, controller};
+    auto parent = dynamic_cast<PrimarySelectionDevice*>(device);
+    auto const offer = new PrimarySelectionOffer{*parent, this, controller};
 
     disclose(device, offer);
 }
@@ -285,12 +275,12 @@ void PrimarySelectionSource::receive(std::string const& mime_type, mir::Fd fd)
     send_send_event(mime_type, fd);
 }
 
-Global::Global(wl_display* display) :
-    PrimarySelectionDeviceManagerV1::Global(display, 1)
+MyGlobal::MyGlobal(wl_display* display) :
+    PrimarySelectionDeviceManagerV1::Global(display, Version<1>{})
 {
 }
 
-void Global::bind(wl_resource* new_zwp_primary_selection_device_manager_v1)
+void MyGlobal::bind(wl_resource* new_zwp_primary_selection_device_manager_v1)
 {
     new PrimarySelectionDeviceManager{new_zwp_primary_selection_device_manager_v1, this};
 }
@@ -302,7 +292,7 @@ auto egmde::primary_selection_extension() -> WaylandExtensions::Builder
             PrimarySelectionDeviceManager::interface_name,
             [](WaylandExtensions::Context const* context)
             {
-                return std::make_shared<Global>(context->display());
+                return std::make_shared<MyGlobal>(context->display());
             }
         };
 }

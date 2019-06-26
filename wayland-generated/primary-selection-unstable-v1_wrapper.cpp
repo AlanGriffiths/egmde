@@ -14,26 +14,6 @@
 
 #include "mir/log.h"
 
-namespace
-{
-void internal_error_processing_request(struct wl_client* client, std::string const& method_name)
-{
-#if (WAYLAND_VERSION_MAJOR > 1 || (WAYLAND_VERSION_MAJOR == 1 && WAYLAND_VERSION_MINOR > 16))
-    wl_client_post_implementation_error(
-        client,
-        "Mir internal error processing %s request",
-        method_name.c_str());
-#else
-    wl_client_post_no_memory(client);
-#endif
-    ::mir::log(
-        ::mir::logging::Severity::error,
-        "frontend:Wayland",
-        std::current_exception(),
-        "Exception processing " + method_name + " request");
-}
-}
-
 namespace mir
 {
 namespace wayland
@@ -68,6 +48,8 @@ mw::PrimarySelectionDeviceManagerV1* mw::PrimarySelectionDeviceManagerV1::from(s
 
 struct mw::PrimarySelectionDeviceManagerV1::Thunks
 {
+    static int const supported_version;
+
     static void create_source_thunk(struct wl_client* client, struct wl_resource* resource, uint32_t id)
     {
         auto me = static_cast<PrimarySelectionDeviceManagerV1*>(wl_resource_get_user_data(resource));
@@ -132,7 +114,7 @@ struct mw::PrimarySelectionDeviceManagerV1::Thunks
         auto resource = wl_resource_create(
             client,
             &zwp_primary_selection_device_manager_v1_interface_data,
-            std::min(version, me->max_version),
+            std::min((int)version, Thunks::supported_version),
             id);
         if (resource == nullptr)
         {
@@ -155,7 +137,9 @@ struct mw::PrimarySelectionDeviceManagerV1::Thunks
     static void const* request_vtable[];
 };
 
-mw::PrimarySelectionDeviceManagerV1::PrimarySelectionDeviceManagerV1(struct wl_resource* resource)
+int const mw::PrimarySelectionDeviceManagerV1::Thunks::supported_version = 1;
+
+mw::PrimarySelectionDeviceManagerV1::PrimarySelectionDeviceManagerV1(struct wl_resource* resource, Version<1>)
     : client{wl_resource_get_client(resource)},
       resource{resource}
 {
@@ -176,24 +160,19 @@ void mw::PrimarySelectionDeviceManagerV1::destroy_wayland_object() const
     wl_resource_destroy(resource);
 }
 
-mw::PrimarySelectionDeviceManagerV1::Global::Global(wl_display* display, uint32_t max_version)
-    : global{wl_global_create(
-        display,
-        &zwp_primary_selection_device_manager_v1_interface_data,
-        max_version,
-        this,
-        &Thunks::bind_thunk)},
-      max_version{max_version}
-{
-    if (global == nullptr)
-    {
-        BOOST_THROW_EXCEPTION((std::runtime_error{"Failed to export zwp_primary_selection_device_manager_v1 interface"}));
-    }
-}
+mw::PrimarySelectionDeviceManagerV1::Global::Global(wl_display* display, Version<1>)
+    : wayland::Global{
+          wl_global_create(
+              display,
+              &zwp_primary_selection_device_manager_v1_interface_data,
+              Thunks::supported_version,
+              this,
+              &Thunks::bind_thunk)}
+{}
 
-mw::PrimarySelectionDeviceManagerV1::Global::~Global()
+auto mw::PrimarySelectionDeviceManagerV1::Global::interface_name() const -> char const*
 {
-    wl_global_destroy(global);
+    return PrimarySelectionDeviceManagerV1::interface_name;
 }
 
 struct wl_interface const* mw::PrimarySelectionDeviceManagerV1::Thunks::create_source_types[] {
@@ -222,6 +201,8 @@ mw::PrimarySelectionDeviceV1* mw::PrimarySelectionDeviceV1::from(struct wl_resou
 
 struct mw::PrimarySelectionDeviceV1::Thunks
 {
+    static int const supported_version;
+
     static void set_selection_thunk(struct wl_client* client, struct wl_resource* resource, struct wl_resource* source, uint32_t serial)
     {
         auto me = static_cast<PrimarySelectionDeviceV1*>(wl_resource_get_user_data(resource));
@@ -266,7 +247,9 @@ struct mw::PrimarySelectionDeviceV1::Thunks
     static void const* request_vtable[];
 };
 
-mw::PrimarySelectionDeviceV1::PrimarySelectionDeviceV1(struct wl_resource* resource)
+int const mw::PrimarySelectionDeviceV1::Thunks::supported_version = 1;
+
+mw::PrimarySelectionDeviceV1::PrimarySelectionDeviceV1(struct wl_resource* resource, Version<1>)
     : client{wl_resource_get_client(resource)},
       resource{resource}
 {
@@ -333,6 +316,8 @@ mw::PrimarySelectionOfferV1* mw::PrimarySelectionOfferV1::from(struct wl_resourc
 
 struct mw::PrimarySelectionOfferV1::Thunks
 {
+    static int const supported_version;
+
     static void receive_thunk(struct wl_client* client, struct wl_resource* resource, char const* mime_type, int32_t fd)
     {
         auto me = static_cast<PrimarySelectionOfferV1*>(wl_resource_get_user_data(resource));
@@ -370,9 +355,11 @@ struct mw::PrimarySelectionOfferV1::Thunks
     static void const* request_vtable[];
 };
 
-mw::PrimarySelectionOfferV1::PrimarySelectionOfferV1(struct wl_resource* resource)
-    : client{wl_resource_get_client(resource)},
-      resource{resource}
+int const mw::PrimarySelectionOfferV1::Thunks::supported_version = 1;
+
+mw::PrimarySelectionOfferV1::PrimarySelectionOfferV1(PrimarySelectionDeviceV1 const& parent)
+    : client{wl_resource_get_client(parent.resource)},
+      resource{wl_resource_create(client, &zwp_primary_selection_offer_v1_interface_data, wl_resource_get_version(parent.resource), 0)}
 {
     if (resource == nullptr)
     {
@@ -417,6 +404,8 @@ mw::PrimarySelectionSourceV1* mw::PrimarySelectionSourceV1::from(struct wl_resou
 
 struct mw::PrimarySelectionSourceV1::Thunks
 {
+    static int const supported_version;
+
     static void offer_thunk(struct wl_client* client, struct wl_resource* resource, char const* mime_type)
     {
         auto me = static_cast<PrimarySelectionSourceV1*>(wl_resource_get_user_data(resource));
@@ -453,7 +442,9 @@ struct mw::PrimarySelectionSourceV1::Thunks
     static void const* request_vtable[];
 };
 
-mw::PrimarySelectionSourceV1::PrimarySelectionSourceV1(struct wl_resource* resource)
+int const mw::PrimarySelectionSourceV1::Thunks::supported_version = 1;
+
+mw::PrimarySelectionSourceV1::PrimarySelectionSourceV1(struct wl_resource* resource, Version<1>)
     : client{wl_resource_get_client(resource)},
       resource{resource}
 {
@@ -505,25 +496,25 @@ namespace wayland
 
 struct wl_interface const zwp_primary_selection_device_manager_v1_interface_data {
     mw::PrimarySelectionDeviceManagerV1::interface_name,
-    mw::PrimarySelectionDeviceManagerV1::interface_version,
+    mw::PrimarySelectionDeviceManagerV1::Thunks::supported_version,
     3, mw::PrimarySelectionDeviceManagerV1::Thunks::request_messages,
     0, nullptr};
 
 struct wl_interface const zwp_primary_selection_device_v1_interface_data {
     mw::PrimarySelectionDeviceV1::interface_name,
-    mw::PrimarySelectionDeviceV1::interface_version,
+    mw::PrimarySelectionDeviceV1::Thunks::supported_version,
     2, mw::PrimarySelectionDeviceV1::Thunks::request_messages,
     2, mw::PrimarySelectionDeviceV1::Thunks::event_messages};
 
 struct wl_interface const zwp_primary_selection_offer_v1_interface_data {
     mw::PrimarySelectionOfferV1::interface_name,
-    mw::PrimarySelectionOfferV1::interface_version,
+    mw::PrimarySelectionOfferV1::Thunks::supported_version,
     2, mw::PrimarySelectionOfferV1::Thunks::request_messages,
     1, mw::PrimarySelectionOfferV1::Thunks::event_messages};
 
 struct wl_interface const zwp_primary_selection_source_v1_interface_data {
     mw::PrimarySelectionSourceV1::interface_name,
-    mw::PrimarySelectionSourceV1::interface_version,
+    mw::PrimarySelectionSourceV1::Thunks::supported_version,
     2, mw::PrimarySelectionSourceV1::Thunks::request_messages,
     2, mw::PrimarySelectionSourceV1::Thunks::event_messages};
 

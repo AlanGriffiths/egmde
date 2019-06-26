@@ -13,20 +13,26 @@
 #include "mir/fd.h"
 #include <wayland-server-core.h>
 
+#include "mir/wayland/wayland_base.h"
+
 namespace mir
 {
 namespace wayland
 {
 
-class PrimarySelectionDeviceManagerV1
+class PrimarySelectionDeviceManagerV1;
+class PrimarySelectionDeviceV1;
+class PrimarySelectionOfferV1;
+class PrimarySelectionSourceV1;
+
+class PrimarySelectionDeviceManagerV1 : public Resource
 {
 public:
     static char const constexpr* interface_name = "zwp_primary_selection_device_manager_v1";
-    static int const interface_version = 1;
 
     static PrimarySelectionDeviceManagerV1* from(struct wl_resource*);
 
-    PrimarySelectionDeviceManagerV1(struct wl_resource* resource);
+    PrimarySelectionDeviceManagerV1(struct wl_resource* resource, Version<1>);
     virtual ~PrimarySelectionDeviceManagerV1() = default;
 
     void destroy_wayland_object() const;
@@ -38,14 +44,12 @@ public:
 
     static bool is_instance(wl_resource* resource);
 
-    class Global
+    class Global : public wayland::Global
     {
     public:
-        Global(wl_display* display, uint32_t max_version);
-        virtual ~Global();
+        Global(wl_display* display, Version<1>);
 
-        wl_global* const global;
-        uint32_t const max_version;
+        auto interface_name() const -> char const* override;
 
     private:
         virtual void bind(wl_resource* new_zwp_primary_selection_device_manager_v1) = 0;
@@ -58,15 +62,14 @@ private:
     virtual void destroy() = 0;
 };
 
-class PrimarySelectionDeviceV1
+class PrimarySelectionDeviceV1 : public Resource
 {
 public:
     static char const constexpr* interface_name = "zwp_primary_selection_device_v1";
-    static int const interface_version = 1;
 
     static PrimarySelectionDeviceV1* from(struct wl_resource*);
 
-    PrimarySelectionDeviceV1(struct wl_resource* resource);
+    PrimarySelectionDeviceV1(struct wl_resource* resource, Version<1>);
     virtual ~PrimarySelectionDeviceV1() = default;
 
     void send_data_offer_event(struct wl_resource* offer) const;
@@ -92,15 +95,14 @@ private:
     virtual void destroy() = 0;
 };
 
-class PrimarySelectionOfferV1
+class PrimarySelectionOfferV1 : public Resource
 {
 public:
     static char const constexpr* interface_name = "zwp_primary_selection_offer_v1";
-    static int const interface_version = 1;
 
     static PrimarySelectionOfferV1* from(struct wl_resource*);
 
-    PrimarySelectionOfferV1(struct wl_resource* resource);
+    PrimarySelectionOfferV1(PrimarySelectionDeviceV1 const& parent);
     virtual ~PrimarySelectionOfferV1() = default;
 
     void send_offer_event(std::string const& mime_type) const;
@@ -124,15 +126,14 @@ private:
     virtual void destroy() = 0;
 };
 
-class PrimarySelectionSourceV1
+class PrimarySelectionSourceV1 : public Resource
 {
 public:
     static char const constexpr* interface_name = "zwp_primary_selection_source_v1";
-    static int const interface_version = 1;
 
     static PrimarySelectionSourceV1* from(struct wl_resource*);
 
-    PrimarySelectionSourceV1(struct wl_resource* resource);
+    PrimarySelectionSourceV1(struct wl_resource* resource, Version<1>);
     virtual ~PrimarySelectionSourceV1() = default;
 
     void send_send_event(std::string const& mime_type, mir::Fd fd) const;

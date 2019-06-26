@@ -223,7 +223,7 @@ void PrimarySelectionOffer::offer(std::string const& mime_type)
 
 void PrimarySelectionSource::offer(std::string const& mime_type)
 {
-    mime_types.push_back(mime_type);
+    add_mime_type(mime_type);
 }
 
 void PrimarySelectionOffer::receive(std::string const& mime_type, mir::Fd fd)
@@ -258,9 +258,7 @@ PrimarySelectionSource::PrimarySelectionSource(
 
 void PrimarySelectionSource::cancelled()
 {
-    for (auto const offer : offers)
-        offer->source_cancelled();
-
+    cancel_offers();
     send_cancelled_event();
 }
 
@@ -273,19 +271,13 @@ void PrimarySelectionSource::create_offer_for(egmde::PrimarySelectionDeviceContr
         0);
 
     auto const offer = new PrimarySelectionOffer{new_resource, this, controller};
-    device->data_offer(offer);
 
-    for (auto const& mime_type : mime_types)
-        offer->offer(mime_type);
-
-    device->select(offer);
-    
-    offers.push_back(offer);
+    disclose(device, offer);
 }
 
 void PrimarySelectionSource::cancel(egmde::PrimarySelectionDeviceController::Offer* offer)
 {
-    offers.erase(std::remove(begin(offers), end(offers), offer), end(offers));
+    cancel_offer(offer);
 }
 
 void PrimarySelectionSource::receive(std::string const& mime_type, mir::Fd fd)

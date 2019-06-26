@@ -95,6 +95,15 @@ public:
         virtual void cancel(Offer* offer) = 0;
 
         virtual void receive(std::string const& mime_type, mir::Fd fd) = 0;
+
+        void disclose(Device* device, Offer* offer);
+        void add_mime_type(std::string const& mime_type);
+        void cancel_offer(Offer* offer);
+        void cancel_offers();
+
+    private:
+        std::vector<std::string> mime_types;
+        std::vector<Offer*> offers;
     };
 
     void set_selection(Source* source);

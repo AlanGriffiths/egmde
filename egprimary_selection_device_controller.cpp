@@ -16,6 +16,8 @@
  * Authored by: Alan Griffiths <alan@octopull.co.uk>
  */
 
+#include "wayland-generated/gtk-primary-selection_wrapper.h"
+#include "gtk_primary_selection.h"
 #include "egprimary_selection_device_controller.h"
 
 #include <algorithm>
@@ -43,4 +45,32 @@ void egmde::PrimarySelectionDeviceController::add(PrimarySelectionDeviceControll
 void egmde::PrimarySelectionDeviceController::remove(PrimarySelectionDeviceController::Device* device)
 {
     devices.erase(std::remove(begin(devices), end(devices), device), end(devices));
+}
+
+void egmde::PrimarySelectionDeviceController::Source::disclose(Device* device, Offer* const offer)
+{
+    device->data_offer(offer);
+
+    for (auto const& mime_type : mime_types)
+        offer->offer(mime_type);
+
+    device->select(offer);
+
+    offers.push_back(offer);
+}
+
+void egmde::PrimarySelectionDeviceController::Source::add_mime_type(std::string const& mime_type)
+{
+    mime_types.push_back(mime_type);
+}
+
+void egmde::PrimarySelectionDeviceController::Source::cancel_offers()
+{
+    for (auto const offer : Source::offers)
+        offer->source_cancelled();
+}
+
+void egmde::PrimarySelectionDeviceController::Source::cancel_offer(Offer* offer)
+{
+    Source::offers.erase(std::remove(begin(Source::offers), end(Source::offers), offer), end(Source::offers));
 }

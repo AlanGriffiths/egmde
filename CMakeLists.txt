@@ -15,12 +15,22 @@ pkg_check_modules(XKBCOMMON xkbcommon REQUIRED)
 find_package(Boost COMPONENTS filesystem REQUIRED)
 
 pkg_check_modules(MIRWAYLAND mirwayland REQUIRED)
+#pkg_check_modules(MIRTEST mirtest REQUIRED)
 pkg_check_modules(WAYLAND_SERVER REQUIRED wayland-server)
-#pkg_check_modules(MIRAL mircommon REQUIRED) # Mir bug #868
-set(MIRCOMMON_INCLUDE_DIRS /usr/include/mircommon/)
-set(MIRCOMMON_LDFLAGS "-lmircommon")
 
 add_subdirectory(wayland-generated)
+
+add_library(egmde-wayland STATIC
+    wayland-generated/primary-selection-unstable-v1_wrapper.cpp
+    wayland-generated/primary-selection-unstable-v1_wrapper.h
+    wayland-generated/gtk-primary-selection_wrapper.cpp
+    wayland-generated/gtk-primary-selection_wrapper.h
+    egprimary_selection_device_controller.cpp egprimary_selection_device_controller.h
+    primary_selection.cpp primary_selection.h
+    gtk_primary_selection.cpp gtk_primary_selection.h
+)
+
+target_include_directories(egmde-wayland PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS} ${MIRWAYLAND_INCLUDE_DIRS})
 
 add_executable(egmde
     egmde.cpp
@@ -57,11 +67,11 @@ endif()
 
 set_source_files_properties(egmde.cpp PROPERTIES COMPILE_DEFINITIONS EGMDE_WALLPAPER_BOTTOM="${EGMDE_WALLPAPER_BOTTOM}")
 
-target_include_directories(egmde PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS} /usr/include/mirwayland/ ${MIRCOMMON_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
+target_include_directories(egmde PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
 target_link_libraries(egmde
+  egmde-wayland
   ${MIRAL_LDFLAGS}
   ${MIRWAYLAND_LDFLAGS}
-  ${MIRCOMMON_LDFLAGS}
   ${WAYLAND_CLIENT_LIBRARIES}
   ${WAYLAND_SERVER_LDFLAGS}
   ${Boost_LIBRARIES}

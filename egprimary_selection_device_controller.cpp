@@ -22,8 +22,21 @@
 
 #include <algorithm>
 
-egmde::PrimarySelectionDeviceController::NullOffer egmde::PrimarySelectionDeviceController::null_offer;
-egmde::PrimarySelectionDeviceController::NullSource egmde::PrimarySelectionDeviceController::null_source;
+namespace
+{
+static struct NullSource : egmde::PrimarySelectionDeviceController::Source
+{
+    void create_offer_for(egmde::PrimarySelectionDeviceController::Device*) override {}
+
+    void cancelled() override {}
+
+    void cancel(egmde::PrimarySelectionDeviceController::Offer*) override {}
+
+    void receive(std::string const&, mir::Fd) override {}
+} null_source_;
+}
+
+egmde::PrimarySelectionDeviceController::Source* const egmde::PrimarySelectionDeviceController::null_source = &null_source_;
 
 void egmde::PrimarySelectionDeviceController::set_selection(PrimarySelectionDeviceController::Source* source)
 {

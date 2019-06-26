@@ -81,11 +81,8 @@ public:
     {
     public:
         Source() = default;
-
         virtual ~Source() = default;
-
         Source(Source const&) = delete;
-
         Source& operator=(Source const&) = delete;
 
         virtual void cancelled() = 0;
@@ -112,28 +109,10 @@ public:
 
     void remove(Device* device);
 
-    static struct NullOffer : Offer
-    {
-        auto resource() const -> std::experimental::optional<wl_resource*> override { return {}; }
-
-        void offer(std::string const&) override {}
-
-        void source_cancelled() override {}
-    } null_offer;
-
-    static struct NullSource : Source
-    {
-        void create_offer_for(Device*) override {}
-
-        void cancelled() override {}
-
-        void cancel(Offer*) override {}
-
-        void receive(std::string const&, mir::Fd) override {}
-    } null_source;
+    static Source* const null_source;
 
 private:
-    Source* current_selection = &null_source;
+    Source* current_selection = null_source;
 
     std::vector<Device*> devices;
 };

@@ -158,7 +158,7 @@ void PrimarySelectionDevice::set_selection(std::experimental::optional<struct wl
     }
     else
     {
-        controller->set_selection(&egmde::PrimarySelectionDeviceController::null_source);
+        controller->set_selection(egmde::PrimarySelectionDeviceController::null_source);
     }
 }
 
@@ -236,12 +236,12 @@ void PrimarySelectionOffer::destroy()
 
 void PrimarySelectionOffer::source_cancelled()
 {
-    source = &egmde::PrimarySelectionDeviceController::null_source;
+    source = egmde::PrimarySelectionDeviceController::null_source;
 }
 
 void PrimarySelectionSource::destroy()
 {
-    controller->set_selection(&egmde::PrimarySelectionDeviceController::null_source);
+    controller->set_selection(egmde::PrimarySelectionDeviceController::null_source);
     destroy_wayland_object();
 }
 

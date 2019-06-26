@@ -15,7 +15,6 @@ pkg_check_modules(XKBCOMMON xkbcommon REQUIRED)
 find_package(Boost COMPONENTS filesystem REQUIRED)
 
 pkg_check_modules(MIRWAYLAND mirwayland REQUIRED)
-#pkg_check_modules(MIRTEST mirtest REQUIRED)
 pkg_check_modules(WAYLAND_SERVER REQUIRED wayland-server)
 
 add_subdirectory(wayland-generated)
@@ -31,6 +30,26 @@ add_library(egmde-wayland STATIC
 )
 
 target_include_directories(egmde-wayland PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS} ${MIRWAYLAND_INCLUDE_DIRS})
+
+enable_testing()
+pkg_check_modules(MIRTEST mirtest REQUIRED)
+pkg_get_variable(WLCS_BINARY wlcs test_runner)
+
+add_library(egmde-wlcs MODULE
+  wlcs_fixture.cpp)
+
+target_include_directories(egmde-wlcs
+  PUBLIC SYSTEM ${MIRTEST_INCLUDE_DIRS})
+
+target_link_libraries(egmde-wlcs
+  egmde-wayland
+  ${MIRTEST_LIBRARIES}
+)
+
+add_test(
+  NAME wlcs
+  COMMAND ${WLCS_BINARY} ${GTEST_FILTER} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/egmde-wlcs.so
+)
 
 add_executable(egmde
     egmde.cpp

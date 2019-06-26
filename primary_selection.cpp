@@ -17,10 +17,9 @@
  */
 
 #include "primary_selection.h"
+#include "egprimary_selection_device_controller.h"
 
 #include "wayland-generated/primary-selection-unstable-v1_wrapper.h"
-
-#include <algorithm>
 
 using namespace mir::wayland;
 using namespace miral;
@@ -32,115 +31,15 @@ extern struct wl_interface const zwp_primary_selection_offer_v1_interface_data;
 
 namespace
 {
-class PrimarySelectionDeviceController
-{
-public:
-    PrimarySelectionDeviceController() = default;
-    virtual ~PrimarySelectionDeviceController() = default;
-    PrimarySelectionDeviceController(PrimarySelectionDeviceController const&) = delete;
-    PrimarySelectionDeviceController& operator=(PrimarySelectionDeviceController const&) = delete;
-
-    class Offer
-    {
-    public:
-        Offer() = default;
-        virtual ~Offer() = default;
-        Offer(Offer const&) = delete;
-        Offer& operator=(Offer const&) = delete;
-
-        virtual auto resource() const -> std::experimental::optional<wl_resource*> = 0;
-        virtual void offer(std::string const& mime_type) = 0;
-        virtual void source_cancelled() = 0;
-    };
-
-    class Device
-    {
-    public:
-        Device() = default;
-        virtual ~Device() = default;
-        Device(Device const&) = delete;
-        Device& operator=(Device const&) = delete;
-
-        virtual void data_offer(Offer* offer) = 0;
-        virtual void select(Offer* offer) = 0;
-
-        virtual auto client() const -> wl_client* = 0;
-        virtual auto resource() const -> wl_resource* = 0;
-    };
-
-    class Source
-    {
-    public:
-        Source() = default;
-        virtual ~Source() = default;
-        Source(Source const&) = delete;
-        Source& operator=(Source const&) = delete;
-
-        virtual void cancelled() = 0;
-        virtual void create_offer_for(Device*) = 0;
-        virtual void cancel(Offer* offer) = 0;
-        virtual void receive(std::string const& mime_type, mir::Fd fd) = 0;
-    };
-
-    void set_selection(Source* source);
-    void add(Device* device);
-    void remove(Device* device);
-
-    static struct NullOffer : Offer
-    {
-        auto resource() const -> std::experimental::optional<wl_resource*> override { return {}; }
-        void offer(std::string const&) override {}
-        void source_cancelled() override {}
-    } null_offer;
-
-    static struct NullSource : Source
-    {
-        void create_offer_for(Device*) override {}
-        void cancelled() override {}
-        void cancel(Offer*) override {}
-        void receive(std::string const&, mir::Fd) override {}
-    } null_source;
-
-private:
-    Source* current_selection = &null_source;
-
-    std::vector<Device*> devices;
-};
-
-PrimarySelectionDeviceController::NullOffer PrimarySelectionDeviceController::null_offer;
-PrimarySelectionDeviceController::NullSource PrimarySelectionDeviceController::null_source;
-
-void PrimarySelectionDeviceController::set_selection(PrimarySelectionDeviceController::Source* source)
-{
-    current_selection->cancelled();
-    current_selection = source;
-
-    for (auto const device : devices)
-    {
-        current_selection->create_offer_for(device);
-    }
-}
-
-void PrimarySelectionDeviceController::add(PrimarySelectionDeviceController::Device* device)
-{
-    current_selection->create_offer_for(device);
-    devices.push_back(device);
-}
-
-void PrimarySelectionDeviceController::remove(PrimarySelectionDeviceController::Device* device)
-{
-    devices.erase(std::remove(begin(devices), end(devices), device), end(devices));
-}
-
 class PrimarySelectionDeviceManager : public PrimarySelectionDeviceManagerV1
 {
 public:
     PrimarySelectionDeviceManager(
         struct wl_resource* resource,
-        PrimarySelectionDeviceController* controller);
+        egmde::PrimarySelectionDeviceController* controller);
 
 private:
-    PrimarySelectionDeviceController* const controller;
+    egmde::PrimarySelectionDeviceController* const controller;
 
     void create_source(struct wl_resource* id) override;
 
@@ -151,29 +50,29 @@ private:
 
 class PrimarySelectionOffer;
 
-class PrimarySelectionDevice : public PrimarySelectionDeviceV1, PrimarySelectionDeviceController::Device
+class PrimarySelectionDevice : public PrimarySelectionDeviceV1, egmde::PrimarySelectionDeviceController::Device
 {
 public:
     PrimarySelectionDevice(
-        struct wl_resource* resource, PrimarySelectionDeviceController* controller);
+        struct wl_resource* resource, egmde::PrimarySelectionDeviceController* controller);
 
 private:
-    PrimarySelectionDeviceController* const controller;
+    egmde::PrimarySelectionDeviceController* const controller;
 
     void set_selection(std::experimental::optional<struct wl_resource*> const& source, uint32_t serial) override;
 
     void destroy() override;
 
-    void data_offer(PrimarySelectionDeviceController::Offer* offer) override;
+    void data_offer(egmde::PrimarySelectionDeviceController::Offer* offer) override;
 
-    void select(PrimarySelectionDeviceController::Offer* offer) override;
+    void select(egmde::PrimarySelectionDeviceController::Offer* offer) override;
 
     auto client() const -> wl_client* override;
 
     auto resource() const -> wl_resource* override;
 };
 
-class PrimarySelectionOffer : public PrimarySelectionOfferV1, public PrimarySelectionDeviceController::Offer
+class PrimarySelectionOffer : public PrimarySelectionOfferV1, public egmde::PrimarySelectionDeviceController::Offer
 {
 public:
     auto resource() const -> std::experimental::optional<wl_resource*> override;
@@ -185,44 +84,44 @@ public:
 public:
     PrimarySelectionOffer(
         struct wl_resource* resource,
-        PrimarySelectionDeviceController::Source* source,
-        PrimarySelectionDeviceController* controller);
+        egmde::PrimarySelectionDeviceController::Source* source,
+        egmde::PrimarySelectionDeviceController* controller);
 
 private:
-    PrimarySelectionDeviceController::Source* source;
-    PrimarySelectionDeviceController* const controller;
+    egmde::PrimarySelectionDeviceController::Source* source;
+    egmde::PrimarySelectionDeviceController* const controller;
 
     void receive(std::string const& mime_type, mir::Fd fd) override;
 
     void destroy() override;
 };
 
-class PrimarySelectionSource : public PrimarySelectionSourceV1, PrimarySelectionDeviceController::Source
+class PrimarySelectionSource : public PrimarySelectionSourceV1, egmde::PrimarySelectionDeviceController::Source
 {
 public:
     PrimarySelectionSource(
-        struct wl_resource* resource, PrimarySelectionDeviceController* controller);
+        struct wl_resource* resource, egmde::PrimarySelectionDeviceController* controller);
 
 private:
-    PrimarySelectionDeviceController* const controller;
+    egmde::PrimarySelectionDeviceController* const controller;
 
     void offer(std::string const& mime_type) override;
 
     void destroy() override;
 
-    void cancel(PrimarySelectionDeviceController::Offer* offer) override;
+    void cancel(egmde::PrimarySelectionDeviceController::Offer* offer) override;
 
     void cancelled() override;
 
-    void create_offer_for(PrimarySelectionDeviceController::Device* device) override;
+    void create_offer_for(egmde::PrimarySelectionDeviceController::Device* device) override;
 
     void receive(std::string const& mime_type, mir::Fd fd) override;
 
     std::vector<std::string> mime_types;
-    std::vector<PrimarySelectionDeviceController::Offer*> offers;
+    std::vector<egmde::PrimarySelectionDeviceController::Offer*> offers;
 };
 
-class Global : public PrimarySelectionDeviceManagerV1::Global, PrimarySelectionDeviceController
+class Global : public PrimarySelectionDeviceManagerV1::Global, egmde::PrimarySelectionDeviceController
 {
 public:
     explicit Global(wl_display* display);
@@ -248,7 +147,7 @@ void PrimarySelectionDeviceManager::destroy()
 }
 
 PrimarySelectionDeviceManager::PrimarySelectionDeviceManager(
-    struct wl_resource* resource, PrimarySelectionDeviceController* controller) :
+    struct wl_resource* resource, egmde::PrimarySelectionDeviceController* controller) :
     PrimarySelectionDeviceManagerV1(resource),
     controller{controller}
 {
@@ -258,11 +157,11 @@ void PrimarySelectionDevice::set_selection(std::experimental::optional<struct wl
 {
     if (source)
     {
-        controller->set_selection(dynamic_cast<PrimarySelectionDeviceController::Source*>(PrimarySelectionSource::from(source.value())));
+        controller->set_selection(dynamic_cast<egmde::PrimarySelectionDeviceController::Source*>(PrimarySelectionSource::from(source.value())));
     }
     else
     {
-        controller->set_selection(&PrimarySelectionDeviceController::null_source);
+        controller->set_selection(&egmde::PrimarySelectionDeviceController::null_source);
     }
 }
 
@@ -274,14 +173,14 @@ void PrimarySelectionDevice::destroy()
 
 PrimarySelectionDevice::PrimarySelectionDevice(
     struct wl_resource* resource,
-    PrimarySelectionDeviceController* controller) :
+    egmde::PrimarySelectionDeviceController* controller) :
     PrimarySelectionDeviceV1(resource),
     controller{controller}
 {
     controller->add(this);
 }
 
-void PrimarySelectionDevice::data_offer(PrimarySelectionDeviceController::Offer* offer)
+void PrimarySelectionDevice::data_offer(egmde::PrimarySelectionDeviceController::Offer* offer)
 {
     if (auto offer_resource = offer->resource())
         send_data_offer_event(offer_resource.value());
@@ -297,15 +196,15 @@ auto PrimarySelectionDevice::resource() const -> wl_resource*
     return PrimarySelectionDeviceV1::resource;
 }
 
-void PrimarySelectionDevice::select(PrimarySelectionDeviceController::Offer* offer)
+void PrimarySelectionDevice::select(egmde::PrimarySelectionDeviceController::Offer* offer)
 {
     send_selection_event(offer->resource());
 }
 
 PrimarySelectionOffer::PrimarySelectionOffer(
     struct wl_resource* resource,
-    PrimarySelectionDeviceController::Source* source,
-    PrimarySelectionDeviceController* controller) :
+    egmde::PrimarySelectionDeviceController::Source* source,
+    egmde::PrimarySelectionDeviceController* controller) :
     PrimarySelectionOfferV1(resource),
     source{source},
     controller{controller}
@@ -340,18 +239,18 @@ void PrimarySelectionOffer::destroy()
 
 void PrimarySelectionOffer::source_cancelled()
 {
-    source = &PrimarySelectionDeviceController::null_source;
+    source = &egmde::PrimarySelectionDeviceController::null_source;
 }
 
 void PrimarySelectionSource::destroy()
 {
-    controller->set_selection(&PrimarySelectionDeviceController::null_source);
+    controller->set_selection(&egmde::PrimarySelectionDeviceController::null_source);
     destroy_wayland_object();
 }
 
 PrimarySelectionSource::PrimarySelectionSource(
     struct wl_resource* resource,
-    PrimarySelectionDeviceController* controller) :
+    egmde::PrimarySelectionDeviceController* controller) :
     PrimarySelectionSourceV1(resource),
     controller{controller}
 {
@@ -365,7 +264,7 @@ void PrimarySelectionSource::cancelled()
     send_cancelled_event();
 }
 
-void PrimarySelectionSource::create_offer_for(PrimarySelectionDeviceController::Device* device)
+void PrimarySelectionSource::create_offer_for(egmde::PrimarySelectionDeviceController::Device* device)
 {
     wl_resource* new_resource = wl_resource_create(
         device->client(),
@@ -384,7 +283,7 @@ void PrimarySelectionSource::create_offer_for(PrimarySelectionDeviceController::
     offers.push_back(offer);
 }
 
-void PrimarySelectionSource::cancel(PrimarySelectionDeviceController::Offer* offer)
+void PrimarySelectionSource::cancel(egmde::PrimarySelectionDeviceController::Offer* offer)
 {
     offers.erase(std::remove(begin(offers), end(offers), offer), end(offers));
 }

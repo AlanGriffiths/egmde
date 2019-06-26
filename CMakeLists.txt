@@ -35,6 +35,7 @@ add_executable(egmde
     wayland-generated/primary-selection-unstable-v1_wrapper.h
     wayland-generated/gtk-primary-selection_wrapper.cpp
     wayland-generated/gtk-primary-selection_wrapper.h
+    egprimary_selection_device_controller.cpp egprimary_selection_device_controller.h
     primary_selection.cpp primary_selection.h
     gtk_primary_selection.cpp gtk_primary_selection.h
 )

@@ -45,7 +45,7 @@ private:
 
 class PrimarySelectionOffer;
 
-class PrimarySelectionDevice : public PrimarySelectionDeviceV1, egmde::PrimarySelectionDeviceController::Device
+class PrimarySelectionDevice : public PrimarySelectionDeviceV1, public egmde::PrimarySelectionDeviceController::Device
 {
 public:
     PrimarySelectionDevice(
@@ -91,7 +91,7 @@ private:
     void destroy() override;
 };
 
-class PrimarySelectionSource : public PrimarySelectionSourceV1, egmde::PrimarySelectionDeviceController::Source
+class PrimarySelectionSource : public PrimarySelectionSourceV1, public egmde::PrimarySelectionDeviceController::Source
 {
 public:
     PrimarySelectionSource(
@@ -116,7 +116,7 @@ private:
     std::vector<egmde::PrimarySelectionDeviceController::Offer*> offers;
 };
 
-class MyGlobal : public PrimarySelectionDeviceManagerV1::Global, egmde::PrimarySelectionDeviceController
+class MyGlobal : public PrimarySelectionDeviceManagerV1::Global, public egmde::PrimarySelectionDeviceController
 {
 public:
     explicit MyGlobal(wl_display* display);

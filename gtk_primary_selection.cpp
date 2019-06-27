@@ -45,7 +45,7 @@ private:
 
 class PrimarySelectionOffer;
 
-class PrimarySelectionDevice : public GtkPrimarySelectionDevice, egmde::PrimarySelectionDeviceController::Device
+class PrimarySelectionDevice : public GtkPrimarySelectionDevice, public egmde::PrimarySelectionDeviceController::Device
 {
 public:
     PrimarySelectionDevice(
@@ -91,7 +91,7 @@ private:
     void destroy() override;
 };
 
-class PrimarySelectionSource : public GtkPrimarySelectionSource, egmde::PrimarySelectionDeviceController::Source
+class PrimarySelectionSource : public GtkPrimarySelectionSource, public egmde::PrimarySelectionDeviceController::Source
 {
 public:
     PrimarySelectionSource(
@@ -113,7 +113,7 @@ private:
     void receive(std::string const& mime_type, mir::Fd fd) override;
 };
 
-class MyGlobal : public GtkPrimarySelectionDeviceManager::Global, egmde::PrimarySelectionDeviceController
+class MyGlobal : public GtkPrimarySelectionDeviceManager::Global, public egmde::PrimarySelectionDeviceController
 {
 public:
     explicit MyGlobal(wl_display* display);

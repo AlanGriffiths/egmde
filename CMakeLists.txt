@@ -44,6 +44,14 @@ target_include_directories(egmde-wlcs
 target_link_libraries(egmde-wlcs
   egmde-wayland
   ${MIRTEST_LIBRARIES}
+  ${MIRWAYLAND_LDFLAGS}
+  ${WAYLAND_CLIENT_LDFLAGS}
+  ${WAYLAND_SERVER_LDFLAGS}
+)
+
+set_target_properties(egmde-wlcs
+  PROPERTIES
+  PREFIX ""
 )
 
 add_test(

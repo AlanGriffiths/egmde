@@ -56,7 +56,7 @@ set_target_properties(egmde-wlcs
 
 add_test(
   NAME wlcs
-  COMMAND ${WLCS_BINARY} ${GTEST_FILTER} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/egmde-wlcs.so
+  COMMAND ${WLCS_BINARY} ${GTEST_FILTER} ${CMAKE_BINARY_DIR}/egmde-wlcs.so
 )
 
 add_executable(egmde

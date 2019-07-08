@@ -18,6 +18,7 @@ add_executable(egmde
     egwallpaper.cpp egwallpaper.h
     printer.cpp printer.h
     egfullscreenclient.cpp egfullscreenclient.h
+    egwindowmanager.cpp egwindowmanager.h
 )
 
 execute_process(

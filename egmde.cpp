@@ -17,6 +17,7 @@
  */
 
 #include "egwallpaper.h"
+#include "egwindowmanager.h"
 
 #include <miral/command_line_option.h>
 #include <miral/internal_client.h>
@@ -76,9 +77,14 @@ int main(int argc, char const* argv[])
 
     return runner.run_with(
         {
-            set_window_management_policy<MinimalWindowManager>(),
+            set_window_management_policy<egmde::WindowManager>(wallpaper),
             external_client_launcher,
             AppendEventFilter{keyboard_shortcuts},
             Keymap{},
+            CommandLineOption{[&](auto& option) { wallpaper.top(option);},
+                              "wallpaper-top",    "Colour of wallpaper RGB", "0x000000"},
+            CommandLineOption{[&](auto& option) { wallpaper.bottom(option);},
+                              "wallpaper-bottom", "Colour of wallpaper RGB", EGMDE_WALLPAPER_BOTTOM},
+            StartupInternalClient{std::ref(wallpaper)},
         });
 }

@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=egmde
+Comment=The example Mir server
+Exec=egmde
+Type=Application
+Icon=ubuntu-logo

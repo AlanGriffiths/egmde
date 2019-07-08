@@ -41,10 +41,14 @@ target_include_directories(egmde PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS} ${Boost_INC
 target_link_libraries(     egmde               ${MIRAL_LDFLAGS}      ${WAYLAND_CLIENT_LIBRARIES}  ${Boost_LIBRARIES}    ${FREETYPE_LIBRARIES})
 target_link_libraries(     egmde               ${XKBCOMMON_LIBRARIES})
 
-add_custom_target(egmde-desktop ALL
-    cp ${CMAKE_CURRENT_SOURCE_DIR}/egmde-desktop.sh ${CMAKE_BINARY_DIR}/egmde-desktop
+install(PROGRAMS ${CMAKE_BINARY_DIR}/egmde ${CMAKE_BINARY_DIR}/egmde
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
 
-install(PROGRAMS ${CMAKE_BINARY_DIR}/egmde ${CMAKE_BINARY_DIR}/egmde-desktop
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+install(FILES ${CMAKE_SOURCE_DIR}/egmde.desktop
+    DESTINATION /usr/share/wayland-sessions/
+)
+
+install(FILES ${CMAKE_SOURCE_DIR}/egmde.desktop
+    DESTINATION /usr/share/applications/
 )

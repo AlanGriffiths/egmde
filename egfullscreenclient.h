@@ -38,7 +38,7 @@ namespace egmde
 class FullscreenClient
 {
 public:
-    FullscreenClient(wl_display* display);
+    explicit FullscreenClient(wl_display* display);
 
     virtual ~FullscreenClient();
 
@@ -46,7 +46,7 @@ public:
 
     void stop();
 
-    auto make_shm_pool(int size, void** data) const
+    auto make_shm_pool(size_t size, void** data) const
     -> std::unique_ptr<wl_shm_pool, void (*)(wl_shm_pool*)>;
 
     wl_display* display = nullptr;

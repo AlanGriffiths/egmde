@@ -257,7 +257,7 @@ void egmde::FullscreenClient::on_new_output(Output const* output)
     wl_display_roundtrip(display);
 }
 
-auto egmde::FullscreenClient::make_shm_pool(int size, void **data) const
+auto egmde::FullscreenClient::make_shm_pool(size_t size, void** data) const
 -> std::unique_ptr<wl_shm_pool, void(*)(wl_shm_pool*)>
 {
     static auto (*open_shm_file)() -> mir::Fd = []
@@ -341,8 +341,7 @@ void egmde::FullscreenClient::new_global(struct wl_registry* registry, uint32_t 
     {
         // NOTE: We'd normally need to do std::min(version, 2), lest the compositor only support version 1
         // of the interface. However, we're an internal client of a compositor that supports version 2, so…
-        auto output =
-            static_cast<wl_output*>(wl_registry_bind(registry, id, &wl_output_interface, 2));
+        auto output = static_cast<wl_output*>(wl_registry_bind(registry, id, &wl_output_interface, 2));
         bound_outputs.insert(
             std::make_pair(
                 id,
@@ -380,7 +379,7 @@ void egmde::FullscreenClient::run(wl_display* display)
 
     pollfd fds[indices] =
         {
-            fds[display_fd] = {wl_display_get_fd(display), POLLIN, 0},
+            {wl_display_get_fd(display), POLLIN, 0},
             {shutdown_signal, POLLIN, 0},
         };
 

@@ -98,6 +98,34 @@ wl_output_listener const egmde::FullscreenClient::Output::output_listener = {
     &scale,
 };
 
+egmde::FullscreenClient::SurfaceInfo::SurfaceInfo(Output const* output) :
+    output{output}
+{
+
+}
+
+egmde::FullscreenClient::SurfaceInfo::~SurfaceInfo()
+{
+    clear_window();
+}
+
+void egmde::FullscreenClient::SurfaceInfo::clear_window()
+{
+    if (buffer)
+        wl_buffer_destroy(buffer);
+
+    if (shell_surface)
+        wl_shell_surface_destroy(shell_surface);
+
+    if (surface)
+        wl_surface_destroy(surface);
+
+
+    buffer = nullptr;
+    shell_surface = nullptr;
+    surface = nullptr;
+}
+
 void egmde::FullscreenClient::Output::done(void* data, struct wl_output* /*wl_output*/)
 {
     auto output = static_cast<Output*>(data);
@@ -119,8 +147,8 @@ egmde::FullscreenClient::FullscreenClient(wl_display* display) :
     registry = {wl_display_get_registry(display), &wl_registry_destroy};
 
     static wl_registry_listener const registry_listener = {
-        new_global,
-        remove_global
+        [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->new_global(args...); },
+        [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->remove_global(args...); },
     };
 
     wl_registry_add_listener(registry.get(), &registry_listener, this);
@@ -261,31 +289,31 @@ egmde::FullscreenClient::~FullscreenClient()
     wl_display_roundtrip(display);
 }
 
-void egmde::FullscreenClient::new_global(
-    void* data,
-    struct wl_registry* registry,
-    uint32_t id,
-    char const* interface,
-    uint32_t version)
+void egmde::FullscreenClient::new_global(struct wl_registry* registry, uint32_t id, char const* interface, uint32_t version)
 {
     (void)version;
-    FullscreenClient* self = static_cast<decltype(self)>(data);
 
     if (strcmp(interface, "wl_compositor") == 0)
     {
-        self->compositor =
-            static_cast<decltype(self->compositor)>(wl_registry_bind(registry, id, &wl_compositor_interface, 3));
+        compositor =
+            static_cast<decltype(compositor)>(wl_registry_bind(registry, id, &wl_compositor_interface, 3));
     }
     else if (strcmp(interface, "wl_shm") == 0)
     {
-        self->shm = static_cast<decltype(self->shm)>(wl_registry_bind(registry, id, &wl_shm_interface, 1));
+        shm = static_cast<decltype(shm)>(wl_registry_bind(registry, id, &wl_shm_interface, 1));
         // Normally we'd add a listener to pick up the supported formats here
         // As luck would have it, I know that argb8888 is the only format we support :)
     }
     else if (strcmp(interface, "wl_seat") == 0)
     {
-        self->seat = static_cast<decltype(self->seat)>(wl_registry_bind(registry, id, &wl_seat_interface, 4));
-        add_seat_listener(self, self->seat);
+        seat = static_cast<decltype(seat)>(wl_registry_bind(registry, id, &wl_seat_interface, 4));
+        static struct wl_seat_listener seatListener =
+            {
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->seat_capabilities(args...); },
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->seat_name(args...); },
+            };
+
+        wl_seat_add_listener(seat, &seatListener, this);
     }
     else if (strcmp(interface, "wl_output") == 0)
     {
@@ -293,32 +321,29 @@ void egmde::FullscreenClient::new_global(
         // of the interface. However, we're an internal client of a compositor that supports version 2, so…
         auto output =
             static_cast<wl_output*>(wl_registry_bind(registry, id, &wl_output_interface, 2));
-        self->bound_outputs.insert(
+        bound_outputs.insert(
             std::make_pair(
                 id,
                 std::make_unique<Output>(
                     output,
-                    [self](Output const& output) { self->on_new_output(&output); },
-                    [self](Output const& output) { self->on_output_changed(&output); })));
+                    [this](Output const& output) { on_new_output(&output); },
+                    [this](Output const& output) { on_output_changed(&output); })));
     }
     else if (strcmp(interface, "wl_shell") == 0)
     {
-        self->shell = static_cast<decltype(self->shell)>(wl_registry_bind(registry, id, &wl_shell_interface, 1));
+        shell = static_cast<decltype(shell)>(wl_registry_bind(registry, id, &wl_shell_interface, 1));
     }
 }
 
 void egmde::FullscreenClient::remove_global(
-    void* data,
     struct wl_registry* /*registry*/,
     uint32_t id)
 {
-    FullscreenClient* self = static_cast<decltype(self)>(data);
-
-    auto const output = self->bound_outputs.find(id);
-    if (output != self->bound_outputs.end())
+    auto const output = bound_outputs.find(id);
+    if (output != bound_outputs.end())
     {
-        self->on_output_gone(output->second.get());
-        self->bound_outputs.erase(output);
+        on_output_gone(output->second.get());
+        bound_outputs.erase(output);
     }
     // TODO: We should probably also delete any other globals we've bound to that disappear.
 }
@@ -589,15 +614,4 @@ void egmde::FullscreenClient::seat_capabilities(wl_seat* seat, uint32_t capabili
 
 void egmde::FullscreenClient::seat_name(wl_seat* /*seat*/, const char */*name*/)
 {
-}
-
-void egmde::FullscreenClient::add_seat_listener(FullscreenClient* self, wl_seat* seat)
-{
-    static struct wl_seat_listener seat_listener =
-        {
-            [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->seat_capabilities(args...); },
-            [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->seat_name(args...); },
-        };
-
-    wl_seat_add_listener(seat, &seat_listener, self);
 }

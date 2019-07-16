@@ -25,6 +25,9 @@
 
 namespace
 {
+auto const primary_selection_extension = egmde::primary_selection_extension();
+auto const gtk_primary_selection_extension = egmde::gtk_primary_selection_extension();
+
 struct TestWlcsDisplayServer : miral::TestWlcsDisplayServer
 {
     miral::WaylandExtensions wayland_extensions;
@@ -32,25 +35,15 @@ struct TestWlcsDisplayServer : miral::TestWlcsDisplayServer
     TestWlcsDisplayServer(int argc, char const** argv) :
         miral::TestWlcsDisplayServer{argc, argv}
     {
-        wayland_extensions.add_extension(egmde::primary_selection_extension());
-        wayland_extensions.add_extension(egmde::gtk_primary_selection_extension());
+        wayland_extensions.add_extension(primary_selection_extension);
+        wayland_extensions.add_extension(gtk_primary_selection_extension);
         add_server_init(wayland_extensions);
     }
 };
 
 WlcsExtensionDescriptor const extensions[] = {
-    {"wl_compositor",               4},
-    {"wl_shm",                      1},
-    {"wl_data_device_manager",      3},
-    {"wl_shell",                    1},
-    {"wl_seat",                     6},
-    {"wl_output",                   3},
-    {"wl_subcompositor",            1},
-    {"xdg_wm_base",                 1},
-    {"zxdg_shell_unstable_v6",      1},
-    {"wlr_layer_shell_unstable_v1", 1},
-    {"zwp_primary_selection_device_manager_v1", 1},
-    {"gtk_primary_selection_device_manager", 1},
+    {primary_selection_extension.name.c_str(), 1},
+    {gtk_primary_selection_extension.name.c_str(), 1},
 };
 
 WlcsIntegrationDescriptor const descriptor{

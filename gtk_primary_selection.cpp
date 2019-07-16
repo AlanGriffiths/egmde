@@ -58,13 +58,13 @@ private:
 
     void destroy() override;
 
-    void data_offer(egmde::PrimarySelectionDeviceController::Offer* offer) override;
-
     void select(egmde::PrimarySelectionDeviceController::Offer* offer) override;
 
     auto client() const -> wl_client* override;
 
     auto resource() const -> wl_resource* override;
+
+    void send_data_offer(wl_resource* resource) const override;
 };
 
 class PrimarySelectionOffer : public GtkPrimarySelectionOffer, public egmde::PrimarySelectionDeviceController::Offer
@@ -172,11 +172,7 @@ PrimarySelectionDevice::PrimarySelectionDevice(
     controller->add(this);
 }
 
-void PrimarySelectionDevice::data_offer(egmde::PrimarySelectionDeviceController::Offer* offer)
-{
-    if (auto offer_resource = offer->resource())
-        send_data_offer_event(offer_resource.value());
-}
+void PrimarySelectionDevice::send_data_offer(wl_resource* resource) const { send_data_offer_event(resource); }
 
 auto PrimarySelectionDevice::client() const -> wl_client*
 {

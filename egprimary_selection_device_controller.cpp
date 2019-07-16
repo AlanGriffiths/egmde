@@ -62,7 +62,7 @@ void egmde::PrimarySelectionDeviceController::remove(PrimarySelectionDeviceContr
 
 void egmde::PrimarySelectionDeviceController::Source::disclose(Device* device, Offer* const offer)
 {
-    device->data_offer(offer);
+    device->make_data_offer(offer);
 
     for (auto const& mime_type : mime_types)
         offer->offer(mime_type);
@@ -86,4 +86,12 @@ void egmde::PrimarySelectionDeviceController::Source::cancel_offers()
 void egmde::PrimarySelectionDeviceController::Source::cancel_offer(Offer* offer)
 {
     Source::offers.erase(std::remove(begin(Source::offers), end(Source::offers), offer), end(Source::offers));
+}
+
+void egmde::PrimarySelectionDeviceController::Device::make_data_offer(Offer* offer)
+{
+    if (auto offer_resource = offer->resource())
+    {
+        send_data_offer(offer_resource.value());
+    }
 }

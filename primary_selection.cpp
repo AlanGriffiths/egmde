@@ -51,14 +51,14 @@ public:
     PrimarySelectionDevice(
         struct wl_resource* resource, egmde::PrimarySelectionDeviceController* controller);
 
+    void send_data_offer(wl_resource* resource) const override;
+
 private:
     egmde::PrimarySelectionDeviceController* const controller;
 
     void set_selection(std::experimental::optional<struct wl_resource*> const& source, uint32_t serial) override;
 
     void destroy() override;
-
-    void data_offer(egmde::PrimarySelectionDeviceController::Offer* offer) override;
 
     void select(egmde::PrimarySelectionDeviceController::Offer* offer) override;
 
@@ -175,12 +175,6 @@ PrimarySelectionDevice::PrimarySelectionDevice(
     controller->add(this);
 }
 
-void PrimarySelectionDevice::data_offer(egmde::PrimarySelectionDeviceController::Offer* offer)
-{
-    if (auto offer_resource = offer->resource())
-        send_data_offer_event(offer_resource.value());
-}
-
 auto PrimarySelectionDevice::client() const -> wl_client*
 {
     return PrimarySelectionDeviceV1::client;
@@ -194,6 +188,11 @@ auto PrimarySelectionDevice::resource() const -> wl_resource*
 void PrimarySelectionDevice::select(egmde::PrimarySelectionDeviceController::Offer* offer)
 {
     send_selection_event(offer->resource());
+}
+
+void PrimarySelectionDevice::send_data_offer(wl_resource* resource) const
+{
+    send_data_offer_event(resource);
 }
 
 PrimarySelectionOffer::PrimarySelectionOffer(

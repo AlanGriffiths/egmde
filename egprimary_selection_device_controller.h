@@ -68,7 +68,9 @@ public:
 
         Device& operator=(Device const&) = delete;
 
-        virtual void data_offer(Offer* offer) = 0;
+        void make_data_offer(Offer* offer);
+
+        virtual void send_data_offer(wl_resource* resource) const = 0;
 
         virtual void select(Offer* offer) = 0;
 

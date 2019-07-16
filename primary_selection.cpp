@@ -60,8 +60,6 @@ private:
 
     auto client() const -> wl_client* override;
 
-    auto resource() const -> wl_resource* override;
-
     void send_data_offer(wl_resource* resource) const override;
 };
 
@@ -167,11 +165,6 @@ PrimarySelectionDevice::PrimarySelectionDevice(
 auto PrimarySelectionDevice::client() const -> wl_client*
 {
     return PrimarySelectionDeviceV1::client;
-}
-
-auto PrimarySelectionDevice::resource() const -> wl_resource*
-{
-    return PrimarySelectionDeviceV1::resource;
 }
 
 void PrimarySelectionDevice::select(egmde::PrimarySelectionDeviceController::Offer* offer)

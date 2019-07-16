@@ -76,8 +76,6 @@ public:
 
         virtual auto client() const -> wl_client* = 0;
 
-        virtual auto resource() const -> wl_resource* = 0;
-
     protected:
         PrimarySelectionDeviceController* const controller;
     };

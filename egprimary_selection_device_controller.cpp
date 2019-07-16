@@ -26,6 +26,8 @@ namespace
 {
 static struct NullSource : egmde::PrimarySelectionDeviceController::Source
 {
+    NullSource() : Source(nullptr) {}
+
     void create_offer_for(egmde::PrimarySelectionDeviceController::Device*) override {}
 
     void cancelled() override {}
@@ -60,6 +62,17 @@ void egmde::PrimarySelectionDeviceController::remove(PrimarySelectionDeviceContr
     devices.erase(std::remove(begin(devices), end(devices), device), end(devices));
 }
 
+void egmde::PrimarySelectionDeviceController::remove(Source* source)
+{
+    if (current_selection == source)
+        current_selection = null_source;
+}
+
+egmde::PrimarySelectionDeviceController::Source::Source(PrimarySelectionDeviceController* const controller) :
+    controller{controller}
+{
+}
+
 void egmde::PrimarySelectionDeviceController::Source::disclose(Device* device, Offer* const offer)
 {
     device->make_data_offer(offer);
@@ -88,6 +101,23 @@ void egmde::PrimarySelectionDeviceController::Source::cancel_offer(Offer* offer)
     Source::offers.erase(std::remove(begin(Source::offers), end(Source::offers), offer), end(Source::offers));
 }
 
+egmde::PrimarySelectionDeviceController::Source::~Source()
+{
+    // We need a null check because of NullSource
+    if (controller) controller->remove(this);
+}
+
+egmde::PrimarySelectionDeviceController::Device::Device(PrimarySelectionDeviceController* const controller) :
+    controller{controller}
+{
+    controller->add(this);
+}
+
+egmde::PrimarySelectionDeviceController::Device::~Device()
+{
+    controller->remove(this);
+}
+
 void egmde::PrimarySelectionDeviceController::Device::make_data_offer(Offer* offer)
 {
     if (auto offer_resource = offer->resource())
@@ -95,3 +125,4 @@ void egmde::PrimarySelectionDeviceController::Device::make_data_offer(Offer* off
         send_data_offer(offer_resource.value());
     }
 }
+

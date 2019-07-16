@@ -52,8 +52,6 @@ public:
         struct wl_resource* resource, egmde::PrimarySelectionDeviceController* controller);
 
 private:
-    egmde::PrimarySelectionDeviceController* const controller;
-
     void set_selection(std::experimental::optional<struct wl_resource*> const& source, uint32_t serial) override;
 
     void destroy() override;
@@ -79,12 +77,10 @@ public:
 public:
     PrimarySelectionOffer(
         GtkPrimarySelectionDevice const& parent,
-        egmde::PrimarySelectionDeviceController::Source* source,
-        egmde::PrimarySelectionDeviceController* controller);
+        egmde::PrimarySelectionDeviceController::Source* source);
 
 private:
     egmde::PrimarySelectionDeviceController::Source* source;
-    egmde::PrimarySelectionDeviceController* const controller;
 
     void receive(std::string const& mime_type, mir::Fd fd) override;
 
@@ -98,8 +94,6 @@ public:
         struct wl_resource* resource, egmde::PrimarySelectionDeviceController* controller);
 
 private:
-    egmde::PrimarySelectionDeviceController* const controller;
-
     void offer(std::string const& mime_type) override;
 
     void destroy() override;
@@ -159,7 +153,6 @@ void PrimarySelectionDevice::set_selection(std::experimental::optional<struct wl
 
 void PrimarySelectionDevice::destroy()
 {
-    controller->remove(this);
     destroy_wayland_object();
 }
 
@@ -167,12 +160,9 @@ PrimarySelectionDevice::PrimarySelectionDevice(
     struct wl_resource* resource,
     egmde::PrimarySelectionDeviceController* controller) :
     GtkPrimarySelectionDevice(resource, Version<1>{}),
-    controller{controller}
+    egmde::PrimarySelectionDeviceController::Device{controller}
 {
-    controller->add(this);
 }
-
-void PrimarySelectionDevice::send_data_offer(wl_resource* resource) const { send_data_offer_event(resource); }
 
 auto PrimarySelectionDevice::client() const -> wl_client*
 {
@@ -189,13 +179,16 @@ void PrimarySelectionDevice::select(egmde::PrimarySelectionDeviceController::Off
     send_selection_event(offer->resource());
 }
 
+void PrimarySelectionDevice::send_data_offer(wl_resource* resource) const
+{
+    send_data_offer_event(resource);
+}
+
 PrimarySelectionOffer::PrimarySelectionOffer(
     GtkPrimarySelectionDevice const& parent,
-    egmde::PrimarySelectionDeviceController::Source* source,
-    egmde::PrimarySelectionDeviceController* controller) :
+    egmde::PrimarySelectionDeviceController::Source* source) :
     GtkPrimarySelectionOffer(parent),
-    source{source},
-    controller{controller}
+    source{source}
 {
 }
 
@@ -232,7 +225,6 @@ void PrimarySelectionOffer::source_cancelled()
 
 void PrimarySelectionSource::destroy()
 {
-    controller->set_selection(egmde::PrimarySelectionDeviceController::null_source);
     destroy_wayland_object();
 }
 
@@ -240,7 +232,7 @@ PrimarySelectionSource::PrimarySelectionSource(
     struct wl_resource* resource,
     egmde::PrimarySelectionDeviceController* controller) :
     GtkPrimarySelectionSource(resource, Version<1>{}),
-    controller{controller}
+    egmde::PrimarySelectionDeviceController::Source{controller}
 {
 }
 
@@ -254,7 +246,7 @@ void PrimarySelectionSource::create_offer_for(egmde::PrimarySelectionDeviceContr
 {
     auto parent = dynamic_cast<PrimarySelectionDevice*>(device);
 
-    auto const offer = new PrimarySelectionOffer{*parent, this, controller};
+    auto const offer = new PrimarySelectionOffer{*parent, this};
     disclose(device, offer);
 }
 

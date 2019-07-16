@@ -51,11 +51,7 @@ public:
     PrimarySelectionDevice(
         struct wl_resource* resource, egmde::PrimarySelectionDeviceController* controller);
 
-    void send_data_offer(wl_resource* resource) const override;
-
 private:
-    egmde::PrimarySelectionDeviceController* const controller;
-
     void set_selection(std::experimental::optional<struct wl_resource*> const& source, uint32_t serial) override;
 
     void destroy() override;
@@ -65,6 +61,8 @@ private:
     auto client() const -> wl_client* override;
 
     auto resource() const -> wl_resource* override;
+
+    void send_data_offer(wl_resource* resource) const override;
 };
 
 class PrimarySelectionOffer : public PrimarySelectionOfferV1, public egmde::PrimarySelectionDeviceController::Offer
@@ -79,12 +77,10 @@ public:
 public:
     PrimarySelectionOffer(
         PrimarySelectionDevice const& parent,
-        egmde::PrimarySelectionDeviceController::Source* source,
-        egmde::PrimarySelectionDeviceController* controller);
+        egmde::PrimarySelectionDeviceController::Source* source);
 
 private:
     egmde::PrimarySelectionDeviceController::Source* source;
-    egmde::PrimarySelectionDeviceController* const controller;
 
     void receive(std::string const& mime_type, mir::Fd fd) override;
 
@@ -98,8 +94,6 @@ public:
         struct wl_resource* resource, egmde::PrimarySelectionDeviceController* controller);
 
 private:
-    egmde::PrimarySelectionDeviceController* const controller;
-
     void offer(std::string const& mime_type) override;
 
     void destroy() override;
@@ -111,9 +105,6 @@ private:
     void create_offer_for(egmde::PrimarySelectionDeviceController::Device* device) override;
 
     void receive(std::string const& mime_type, mir::Fd fd) override;
-
-    std::vector<std::string> mime_types;
-    std::vector<egmde::PrimarySelectionDeviceController::Offer*> offers;
 };
 
 class MyGlobal : public PrimarySelectionDeviceManagerV1::Global, public egmde::PrimarySelectionDeviceController
@@ -162,7 +153,6 @@ void PrimarySelectionDevice::set_selection(std::experimental::optional<struct wl
 
 void PrimarySelectionDevice::destroy()
 {
-    controller->remove(this);
     destroy_wayland_object();
 }
 
@@ -170,9 +160,8 @@ PrimarySelectionDevice::PrimarySelectionDevice(
     struct wl_resource* resource,
     egmde::PrimarySelectionDeviceController* controller) :
     PrimarySelectionDeviceV1(resource, Version<1>{}),
-    controller{controller}
+    egmde::PrimarySelectionDeviceController::Device{controller}
 {
-    controller->add(this);
 }
 
 auto PrimarySelectionDevice::client() const -> wl_client*
@@ -197,11 +186,9 @@ void PrimarySelectionDevice::send_data_offer(wl_resource* resource) const
 
 PrimarySelectionOffer::PrimarySelectionOffer(
     PrimarySelectionDevice const& parent,
-    egmde::PrimarySelectionDeviceController::Source* source,
-    egmde::PrimarySelectionDeviceController* controller) :
+    egmde::PrimarySelectionDeviceController::Source* source) :
     PrimarySelectionOfferV1(parent),
-    source{source},
-    controller{controller}
+    source{source}
 {
 }
 
@@ -238,7 +225,6 @@ void PrimarySelectionOffer::source_cancelled()
 
 void PrimarySelectionSource::destroy()
 {
-    controller->set_selection(egmde::PrimarySelectionDeviceController::null_source);
     destroy_wayland_object();
 }
 
@@ -246,7 +232,7 @@ PrimarySelectionSource::PrimarySelectionSource(
     struct wl_resource* resource,
     egmde::PrimarySelectionDeviceController* controller) :
     PrimarySelectionSourceV1(resource, Version<1>{}),
-    controller{controller}
+    egmde::PrimarySelectionDeviceController::Source{controller}
 {
 }
 
@@ -259,7 +245,7 @@ void PrimarySelectionSource::cancelled()
 void PrimarySelectionSource::create_offer_for(egmde::PrimarySelectionDeviceController::Device* device)
 {
     auto parent = dynamic_cast<PrimarySelectionDevice*>(device);
-    auto const offer = new PrimarySelectionOffer{*parent, this, controller};
+    auto const offer = new PrimarySelectionOffer{*parent, this};
 
     disclose(device, offer);
 }

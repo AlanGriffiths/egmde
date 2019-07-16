@@ -60,9 +60,9 @@ public:
     class Device
     {
     public:
-        Device() = default;
+        explicit Device(PrimarySelectionDeviceController* const controller);
 
-        virtual ~Device() = default;
+        virtual ~Device();
 
         Device(Device const&) = delete;
 
@@ -77,13 +77,16 @@ public:
         virtual auto client() const -> wl_client* = 0;
 
         virtual auto resource() const -> wl_resource* = 0;
+
+    protected:
+        PrimarySelectionDeviceController* const controller;
     };
 
     class Source
     {
     public:
-        Source() = default;
-        virtual ~Source() = default;
+        explicit Source(PrimarySelectionDeviceController* const controller);
+        virtual ~Source();
         Source(Source const&) = delete;
         Source& operator=(Source const&) = delete;
 
@@ -101,11 +104,14 @@ public:
         void cancel_offers();
 
     private:
+        PrimarySelectionDeviceController* const controller;
+
         std::vector<std::string> mime_types;
         std::vector<Offer*> offers;
     };
 
     void set_selection(Source* source);
+    void remove(Source* source);
 
     void add(Device* device);
 

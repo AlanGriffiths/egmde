@@ -92,8 +92,6 @@ public:
 
         virtual void create_offer_for(Device*) = 0;
 
-        virtual void cancel(Offer* offer) = 0;
-
         virtual void receive(std::string const& mime_type, mir::Fd fd) = 0;
 
         void disclose(Device* device, Offer* offer);

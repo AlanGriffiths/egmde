@@ -32,8 +32,6 @@ static struct NullSource : egmde::PrimarySelectionDeviceController::Source
 
     void cancelled() override {}
 
-    void cancel(egmde::PrimarySelectionDeviceController::Offer*) override {}
-
     void receive(std::string const&, mir::Fd) override {}
 } null_source_;
 }
@@ -110,7 +108,6 @@ egmde::PrimarySelectionDeviceController::Source::~Source()
 egmde::PrimarySelectionDeviceController::Device::Device(PrimarySelectionDeviceController* const controller) :
     controller{controller}
 {
-    controller->add(this);
 }
 
 egmde::PrimarySelectionDeviceController::Device::~Device()

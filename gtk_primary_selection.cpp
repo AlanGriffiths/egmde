@@ -96,8 +96,6 @@ private:
 
     void destroy() override;
 
-    void cancel(egmde::PrimarySelectionDeviceController::Offer* offer) override;
-
     void cancelled() override;
 
     void create_offer_for(egmde::PrimarySelectionDeviceController::Device* device) override;
@@ -160,6 +158,7 @@ PrimarySelectionDevice::PrimarySelectionDevice(
     GtkPrimarySelectionDevice(resource, Version<1>{}),
     egmde::PrimarySelectionDeviceController::Device{controller}
 {
+    controller->add(this);
 }
 
 auto PrimarySelectionDevice::client() const -> wl_client*
@@ -207,7 +206,7 @@ void PrimarySelectionOffer::receive(std::string const& mime_type, mir::Fd fd)
 
 void PrimarySelectionOffer::destroy()
 {
-    source->cancel(this);
+    source->cancel_offer(this);
     destroy_wayland_object();
 }
 
@@ -241,11 +240,6 @@ void PrimarySelectionSource::create_offer_for(egmde::PrimarySelectionDeviceContr
 
     auto const offer = new PrimarySelectionOffer{*parent, this};
     disclose(device, offer);
-}
-
-void PrimarySelectionSource::cancel(egmde::PrimarySelectionDeviceController::Offer* offer)
-{
-    cancel_offer(offer);
 }
 
 void PrimarySelectionSource::receive(std::string const& mime_type, mir::Fd fd)

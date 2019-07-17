@@ -51,7 +51,6 @@ void egmde::PrimarySelectionDeviceController::set_selection(PrimarySelectionDevi
 
 void egmde::PrimarySelectionDeviceController::add(PrimarySelectionDeviceController::Device* device)
 {
-    current_selection->create_offer_for(device);
     devices.push_back(device);
 }
 

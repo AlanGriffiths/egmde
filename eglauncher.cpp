@@ -157,6 +157,10 @@ auto load_details() -> std::vector<app_details>
         if (sl != std::string::npos)
             app.erase(0, sl+1);
 
+        auto sp = app.find(' ');
+        if (sp != std::string::npos)
+            app.erase(sp, app.size());
+
         auto title = name + " [" + app + ']';
 
         if (!name.empty() && !exec.empty())
@@ -426,9 +430,21 @@ void egmde::Launcher::Self::run_app()
     unsetenv("DISPLAY");
 
     auto app = current_app->exec;
-    auto ws = app.find(' ');
+    auto ws = app.find('%');
     if (ws != std::string::npos)
-        app.erase(ws);
+    {
+        // TODO handle exec variables:
+        // https://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables
+        if (app[ws-1] == ' ')
+            --ws;
+        app = app.substr(0, ws);    // For now ignore the rest of the Exec value
+    }
+
+    if (app == "qterminal --drop")
+        app = "qterminal";
+
+    if (app == "gnome-terminal" && boost::filesystem::exists("/usr/bin/gnome-terminal.real"))
+        app = "gnome-terminal --disable-factory";
 
     static char const* launch_prefix = getenv("EGMDE_LAUNCH_PREFIX");
 

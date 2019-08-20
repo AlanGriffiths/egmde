@@ -108,6 +108,7 @@ struct app_details
     std::string exec;
     std::string icon;
     std::string title;
+    std::string desktop_file;
 };
 
 auto load_details() -> std::vector<app_details>
@@ -164,7 +165,7 @@ auto load_details() -> std::vector<app_details>
         auto title = name + " [" + app + ']';
 
         if (!name.empty() && !exec.empty())
-            details.push_back(app_details{name, exec, icon, title});
+            details.push_back(app_details{name, exec, icon, title, desktop.string()});
     }
 
     std::sort(begin(details), end(details),
@@ -426,53 +427,60 @@ void egmde::Launcher::Self::touch_down(
 
 void egmde::Launcher::Self::run_app()
 {
-    setenv("NO_AT_BRIDGE", "1", 1);
-    unsetenv("DISPLAY");
-
-    auto app = current_app->exec;
-    auto ws = app.find('%');
-    if (ws != std::string::npos)
+    if (getenv("EGMDE_SNAPCRAFT_LAUNCH") == nullptr)
     {
-        // TODO handle exec variables:
-        // https://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables
-        if (app[ws-1] == ' ')
-            --ws;
-        app = app.substr(0, ws);    // For now ignore the rest of the Exec value
-    }
+        setenv("NO_AT_BRIDGE", "1", 1);
+        unsetenv("DISPLAY");
 
-    if (app == "qterminal --drop")
-        app = "qterminal";
+        auto app = current_app->exec;
+        auto ws = app.find('%');
+        if (ws != std::string::npos)
+        {
+            // TODO handle exec variables:
+            // https://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables
+            if (app[ws-1] == ' ')
+                --ws;
+            app = app.substr(0, ws);    // For now ignore the rest of the Exec value
+        }
 
-    if (app == "gnome-terminal" && boost::filesystem::exists("/usr/bin/gnome-terminal.real"))
-        app = "gnome-terminal --disable-factory";
+        if (app == "qterminal --drop")
+            app = "qterminal";
 
-    static char const* launch_prefix = getenv("EGMDE_LAUNCH_PREFIX");
+        if (app == "gnome-terminal" && boost::filesystem::exists("/usr/bin/gnome-terminal.real"))
+            app = "gnome-terminal --disable-factory";
 
-    std::vector<std::string> command;
+        static char const* launch_prefix = getenv("EGMDE_LAUNCH_PREFIX");
 
-    char const* start = nullptr;
-    char const* end = nullptr;
+        std::vector<std::string> command;
 
-    if (launch_prefix)
-    {
-        for (start = launch_prefix; (end = strchr(start, ' ')); start = end+1)
+        char const* start = nullptr;
+        char const* end = nullptr;
+
+        if (launch_prefix)
+        {
+            for (start = launch_prefix; (end = strchr(start, ' ')); start = end+1)
+            {
+                if (start != end)
+                    command.emplace_back(start, end);
+            }
+
+            command.emplace_back(start);
+        }
+
+        for (start = app.c_str(); (end = strchr(start, ' ')); start = end+1)
         {
             if (start != end)
                 command.emplace_back(start, end);
         }
 
         command.emplace_back(start);
+        external_client_launcher.launch(command);
     }
-
-    for (start = app.c_str(); (end = strchr(start, ' ')); start = end+1)
+    else
     {
-        if (start != end)
-            command.emplace_back(start, end);
+        system(("dbus-send --session --type=method_call /io/snapcraft/Launcher --dest=io.snapcraft.Launcher "
+                "io.snapcraft.Launcher.OpenDesktopEntry string:" + current_app->desktop_file).c_str());
     }
-
-    command.emplace_back(start);
-
-    external_client_launcher.launch(command);
 
     running = false;
     for_each_surface([this](auto& info) { draw_screen(info); });

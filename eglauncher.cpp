@@ -20,6 +20,8 @@
 #include "egfullscreenclient.h"
 #include "printer.h"
 
+#include "open_desktop_entry.h"
+
 #include <linux/input.h>
 #include <xkbcommon/xkbcommon.h>
 
@@ -478,8 +480,7 @@ void egmde::Launcher::Self::run_app()
     }
     else
     {
-        system(("dbus-send --session --type=method_call /io/snapcraft/Launcher --dest=io.snapcraft.Launcher "
-                "io.snapcraft.Launcher.OpenDesktopEntry string:" + current_app->desktop_file).c_str());
+        open_desktop_entry(current_app->desktop_file);
     }
 
     running = false;

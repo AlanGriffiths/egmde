@@ -232,7 +232,17 @@ void egmde::FullscreenClient::on_new_output(Output const* output)
 auto egmde::FullscreenClient::make_shm_pool(int size, void **data) const
 -> std::unique_ptr<wl_shm_pool, void(*)(wl_shm_pool*)>
 {
-    mir::Fd fd{open("/dev/shm", O_TMPFILE | O_RDWR | O_EXCL, S_IRWXU)};
+    static char const* const shm_dir = []()
+        {
+            if (char const* result = getenv("EGMDE_SHM_DIR"))
+                return result;
+            if (char const* result = getenv("XDG_RUNTIME_DIR"))
+                return result;
+
+            return "/dev/shm";
+        }();
+
+    mir::Fd fd{open(shm_dir, O_TMPFILE | O_RDWR | O_EXCL, S_IRWXU)};
     if (fd < 0) {
         BOOST_THROW_EXCEPTION((std::system_error{errno, std::system_category(), "Failed to open shm buffer"}));
     }

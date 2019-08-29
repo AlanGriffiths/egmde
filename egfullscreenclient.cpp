@@ -233,24 +233,27 @@ namespace
 {
 auto (*open_shm_file)() -> mir::Fd = []
 {
-        static char const* shm_dir = getenv("XDG_RUNTIME_DIR");
-        if (!shm_dir) shm_dir = "/dev/shm";
-
-        auto (* const open_shm_file_locations[])() -> mir::Fd =
-        {
-            []{ return mir::Fd{open(shm_dir, O_TMPFILE | O_RDWR | O_EXCL, S_IRWXU)}; },
-            []{ return mir::Fd{open("/dev/shm", O_TMPFILE | O_RDWR | O_EXCL, S_IRWXU)}; },
-            []{ return mir::Fd{open("/tmp", O_TMPFILE | O_RDWR | O_EXCL, S_IRWXU)}; }
-        };
-
-    for (auto oo : open_shm_file_locations)
+    static char const* shm_dirs[] =
     {
-        open_shm_file = oo;
-        if (auto fd = open_shm_file())
-            return fd;
+        getenv("XDG_RUNTIME_DIR"),  // Wayland based toolkits typically use $XDG_RUNTIME_DIR to open shm pools
+        "/dev/shm",                 // so we try that before "/dev/shm". But confined snaps can't access "/dev/shm"
+        "/tmp"                      // so we try "/tmp" if both of the above fail.
+    };
+
+    static char const* shm_dir;
+
+    for (auto dir : shm_dirs)
+    {
+        if (dir)
+        {
+            shm_dir = dir;
+            open_shm_file = []{ return mir::Fd{open(shm_dir, O_TMPFILE | O_RDWR | O_EXCL, S_IRWXU)}; };
+            if (auto fd = open_shm_file())
+                return fd;
+        }
     }
-    return mir::Fd{};
-};
+        return mir::Fd{};
+    };
 }
 
 auto egmde::FullscreenClient::make_shm_pool(int size, void **data) const

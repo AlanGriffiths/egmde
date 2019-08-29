@@ -241,14 +241,15 @@ auto (*open_shm_file)() -> mir::Fd = []
     };
 
     static char const* shm_dir;
+    open_shm_file = []{ return mir::Fd{open(shm_dir, O_TMPFILE | O_RDWR | O_EXCL, S_IRWXU)}; };
 
     for (auto dir : shm_dirs)
     {
         if (dir)
         {
             shm_dir = dir;
-            open_shm_file = []{ return mir::Fd{open(shm_dir, O_TMPFILE | O_RDWR | O_EXCL, S_IRWXU)}; };
-            if (auto fd = open_shm_file())
+            auto fd = open_shm_file();
+            if (fd >= 0)
                 return fd;
         }
     }

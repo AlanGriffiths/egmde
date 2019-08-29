@@ -229,10 +229,35 @@ void egmde::FullscreenClient::on_new_output(Output const* output)
     wl_display_roundtrip(display);
 }
 
+namespace
+{
+auto (*open_shm_file)() -> mir::Fd = []
+{
+        static char const* shm_dir = getenv("XDG_RUNTIME_DIR");
+        if (!shm_dir) shm_dir = "/dev/shm";
+
+        auto (* const open_shm_file_locations[])() -> mir::Fd =
+        {
+            []{ return mir::Fd{open(shm_dir, O_TMPFILE | O_RDWR | O_EXCL, S_IRWXU)}; },
+            []{ return mir::Fd{open("/dev/shm", O_TMPFILE | O_RDWR | O_EXCL, S_IRWXU)}; },
+            []{ return mir::Fd{open("/tmp", O_TMPFILE | O_RDWR | O_EXCL, S_IRWXU)}; }
+        };
+
+    for (auto oo : open_shm_file_locations)
+    {
+        open_shm_file = oo;
+        if (auto fd = open_shm_file())
+            return fd;
+    }
+    return mir::Fd{};
+};
+}
+
 auto egmde::FullscreenClient::make_shm_pool(int size, void **data) const
 -> std::unique_ptr<wl_shm_pool, void(*)(wl_shm_pool*)>
 {
-    mir::Fd fd{open("/tmp", O_TMPFILE | O_RDWR | O_EXCL, S_IRWXU)};
+    auto fd = open_shm_file();
+
     if (fd < 0) {
         BOOST_THROW_EXCEPTION((std::system_error{errno, std::system_category(), "Failed to open shm buffer"}));
     }

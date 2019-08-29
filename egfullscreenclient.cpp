@@ -232,7 +232,29 @@ void egmde::FullscreenClient::on_new_output(Output const* output)
 auto egmde::FullscreenClient::make_shm_pool(int size, void **data) const
 -> std::unique_ptr<wl_shm_pool, void(*)(wl_shm_pool*)>
 {
-    mir::Fd fd{open("/dev/shm", O_TMPFILE | O_RDWR | O_EXCL, S_IRWXU)};
+    static auto (*open_shm_file)() -> mir::Fd = []
+    {
+        static char const* shm_dir;
+        open_shm_file = []{ return mir::Fd{open(shm_dir, O_TMPFILE | O_RDWR | O_EXCL, S_IRWXU)}; };
+
+        // Wayland based toolkits typically use $XDG_RUNTIME_DIR to open shm pools
+        // so we try that before "/dev/shm". But confined snaps can't access "/dev/shm"
+        // so we try "/tmp" if both of the above fail.
+        for (auto dir : {const_cast<const char*>(getenv("XDG_RUNTIME_DIR")), "/dev/shm", "/tmp" })
+        {
+            if (dir)
+            {
+                shm_dir = dir;
+                auto fd = open_shm_file();
+                if (fd >= 0)
+                    return fd;
+            }
+        }
+        return mir::Fd{};
+    };
+
+    auto fd = open_shm_file();
+
     if (fd < 0) {
         BOOST_THROW_EXCEPTION((std::system_error{errno, std::system_category(), "Failed to open shm buffer"}));
     }

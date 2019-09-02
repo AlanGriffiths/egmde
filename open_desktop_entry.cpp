@@ -37,34 +37,39 @@ private:
 
 void egmde::open_desktop_entry(std::string const& desktop_file)
 {
-    GError* error = nullptr;
-    Connection const connection{g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, &error)};
+    Connection const connection{g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr)};
 
-    char const* const dest = "io.snapcraft.Launcher";
-    char const* const object_path = "/io/snapcraft/Launcher";
-    char const* const interface_name = "io.snapcraft.Launcher";
-    char const* const method_name = "OpenDesktopEntry";
+    static char const* const dest = "io.snapcraft.Launcher";
+    static char const* const object_path = "/io/snapcraft/Launcher";
+    static char const* const interface_name = "io.snapcraft.Launcher";
+    static char const* const method_name = "OpenDesktopEntry";
 
-    auto const result{g_dbus_connection_call_sync(connection,
-                                                  dest,
-                                                  object_path,
-                                                  interface_name,
-                                                  method_name,
-                                                  g_variant_new("(s)", desktop_file.c_str()),
-                                                  nullptr,
-                                                  G_DBUS_CALL_FLAGS_NONE,
-                                                  -1,
-                                                  nullptr,
-                                                  &error)};
-
-    if (result)
+    // For some reason, if this autostarts userd, then the call fails
+    // but as userd has now been started, a second attempt succeeds
+    for (int tries = 0; tries != 2; ++tries)
     {
-        g_variant_unref(result);
-    }
+        GError* error = nullptr;
 
-    if (error)
-    {
-        puts(error->message);
-        g_error_free(error);
+        if (auto const result = g_dbus_connection_call_sync(connection,
+                                                            dest,
+                                                            object_path,
+                                                            interface_name,
+                                                            method_name,
+                                                            g_variant_new("(s)", desktop_file.c_str()),
+                                                            nullptr,
+                                                            G_DBUS_CALL_FLAGS_NONE,
+                                                            G_MAXINT,
+                                                            nullptr,
+                                                            &error))
+        {
+            g_variant_unref(result);
+            break;
+        }
+
+        if (error)
+        {
+            puts(error->message);
+            g_error_free(error);
+        }
     }
 }

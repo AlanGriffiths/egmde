@@ -106,6 +106,7 @@ void egmde::open_desktop_entry(std::string const& desktop_file, std::vector<std:
                                                             &error))
         {
             g_variant_unref(result);
+            g_variant_builder_unref(builder);
             break;
         }
 

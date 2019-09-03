@@ -480,8 +480,14 @@ void egmde::Launcher::Self::run_app()
     }
     else
     {
-//        open_desktop_entry(current_app->desktop_file);
-        open_desktop_entry(current_app->desktop_file, {"WAYLAND_DISPLAY=wayland-0"});
+        // In egmde there's no way to get the correct WAYLAND_DISPLAY value,
+        // but hard-coding it here allows the interface to be tried out
+        open_desktop_entry(current_app->desktop_file,
+            {"WAYLAND_DISPLAY=wayland-0",
+             "XDG_SESSION_TYPE=mir",
+             "GDK_BACKEND=wayland",
+             "QT_QPA_PLATFORM=wayland",
+             "SDL_VIDEODRIVER=wayland"});
     }
 
     running = false;

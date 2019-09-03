@@ -73,3 +73,48 @@ void egmde::open_desktop_entry(std::string const& desktop_file)
         }
     }
 }
+
+void egmde::open_desktop_entry(std::string const& desktop_file, std::vector<std::string> const& env)
+{
+    Connection const connection{g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr)};
+
+    static char const* const dest = "io.snapcraft.Launcher";
+    static char const* const object_path = "/io/snapcraft/Launcher";
+    static char const* const interface_name = "io.snapcraft.Launcher";
+    static char const* const method_name = "OpenDesktopEntryEnv";
+
+    // For some reason, if this autostarts userd, then the call fails
+    // but as userd has now been started, a second attempt succeeds
+    for (int tries = 0; tries != 2; ++tries)
+    {
+        GError* error = nullptr;
+
+        GVariantBuilder* const builder = g_variant_builder_new(G_VARIANT_TYPE ("as"));
+        for (auto const& e : env)
+            g_variant_builder_add (builder, "s", e.c_str());
+
+        if (auto const result = g_dbus_connection_call_sync(connection,
+                                                            dest,
+                                                            object_path,
+                                                            interface_name,
+                                                            method_name,
+                                                            g_variant_new("(sas)", desktop_file.c_str(), builder),
+                                                            nullptr,
+                                                            G_DBUS_CALL_FLAGS_NONE,
+                                                            G_MAXINT,
+                                                            nullptr,
+                                                            &error))
+        {
+            g_variant_unref(result);
+            break;
+        }
+
+        if (error)
+        {
+            puts(error->message);
+            g_error_free(error);
+        }
+
+        g_variant_builder_unref(builder);
+    }
+}

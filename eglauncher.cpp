@@ -480,7 +480,8 @@ void egmde::Launcher::Self::run_app()
     }
     else
     {
-        open_desktop_entry(current_app->desktop_file);
+//        open_desktop_entry(current_app->desktop_file);
+        open_desktop_entry(current_app->desktop_file, {"WAYLAND_DISPLAY=wayland-0"});
     }
 
     running = false;

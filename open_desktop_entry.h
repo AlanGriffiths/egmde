@@ -20,10 +20,12 @@
 #define EGMDE_OPEN_DESKTOP_ENTRY_H
 
 #include <string>
+#include <vector>
 
 namespace egmde
 {
 void open_desktop_entry(std::string const& desktop_file);
+void open_desktop_entry(std::string const& desktop_file, std::vector<std::string> const& env);
 }
 
 #endif //EGMDE_OPEN_DESKTOP_ENTRY_H

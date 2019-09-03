@@ -33,6 +33,45 @@ public:
 private:
     friend void g_object_unref(GDBusConnection*) = delete;
 };
+
+// Desktop File ID (https://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#desktop-file-id)
+//
+// Each desktop entry representing an application is identified by its desktop file ID, which is based
+// on its filename.
+//
+// To determine the ID of a desktop file, make its full path relative to the $XDG_DATA_DIRS component
+// in which the desktop file is installed, remove the "applications/" prefix, and turn '/' into '-'.
+//
+// For example /usr/share/applications/foo/bar.desktop has the desktop file ID foo-bar.desktop.
+//
+// If multiple files have the same desktop file ID, the first one in the $XDG_DATA_DIRS precedence
+// order is used.
+//
+// For example, if $XDG_DATA_DIRS contains the default paths /usr/local/share:/usr/share, then
+// /usr/local/share/applications/org.foo.bar.desktop and /usr/share/applications/org.foo.bar.desktop
+// both have the same desktop file ID org.foo.bar.desktop, but only the first one will be used.
+//
+// If both foo-bar.desktop and foo/bar.desktop exist, it is undefined which is selected.
+//
+// If the desktop file is not installed in an applications subdirectory of one of the $XDG_DATA_DIRS
+// components, it does not have an ID.
+auto extract_id(std::string const& filename) -> std::string
+{
+    static std::string const applications{"/applications/"};
+
+    auto const pos = filename.rfind(applications);
+    if (pos == std::string::npos)
+        return filename;
+
+    auto result = filename.substr(pos+applications.length());
+
+    for (auto& r : result)
+    {
+        if (r == '/') r = '-';
+    }
+
+    return result;
+}
 }
 
 void egmde::open_desktop_entry(std::string const& desktop_file)
@@ -43,6 +82,7 @@ void egmde::open_desktop_entry(std::string const& desktop_file)
     static char const* const object_path = "/io/snapcraft/Launcher";
     static char const* const interface_name = "io.snapcraft.Launcher";
     static char const* const method_name = "OpenDesktopEntry";
+    auto const id = extract_id(desktop_file);
 
     // For some reason, if this autostarts userd, then the call fails
     // but as userd has now been started, a second attempt succeeds
@@ -55,7 +95,7 @@ void egmde::open_desktop_entry(std::string const& desktop_file)
                                                             object_path,
                                                             interface_name,
                                                             method_name,
-                                                            g_variant_new("(s)", desktop_file.c_str()),
+                                                            g_variant_new("(s)", id.c_str()),
                                                             nullptr,
                                                             G_DBUS_CALL_FLAGS_NONE,
                                                             G_MAXINT,
@@ -82,6 +122,7 @@ void egmde::open_desktop_entry(std::string const& desktop_file, std::vector<std:
     static char const* const object_path = "/io/snapcraft/Launcher";
     static char const* const interface_name = "io.snapcraft.Launcher";
     static char const* const method_name = "OpenDesktopEntryEnv";
+    auto const id = extract_id(desktop_file);
 
     // For some reason, if this autostarts userd, then the call fails
     // but as userd has now been started, a second attempt succeeds
@@ -98,7 +139,7 @@ void egmde::open_desktop_entry(std::string const& desktop_file, std::vector<std:
                                                             object_path,
                                                             interface_name,
                                                             method_name,
-                                                            g_variant_new("(sas)", desktop_file.c_str(), builder),
+                                                            g_variant_new("(sas)", id.c_str(), builder),
                                                             nullptr,
                                                             G_DBUS_CALL_FLAGS_NONE,
                                                             G_MAXINT,

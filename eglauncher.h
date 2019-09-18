@@ -22,6 +22,7 @@
 #include <miral/application.h>
 
 #include <miral/external_client.h>
+#include <miral/runner.h>
 
 #include <memory>
 #include <mutex>
@@ -32,7 +33,7 @@ namespace egmde
 class Launcher
 {
 public:
-    Launcher(miral::ExternalClientLauncher& external_client_launcher);
+    Launcher(miral::ExternalClientLauncher& external_client_launcher, miral::MirRunner const& runner);
 
     // These operators are the protocol for an "Internal Client"
     void operator()(wl_display* display);
@@ -44,6 +45,7 @@ public:
 
 private:
     miral::ExternalClientLauncher& external_client_launcher;
+    miral::MirRunner const& runner;
     std::mutex mutable mutex;
 
     struct Self;

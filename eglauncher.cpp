@@ -22,6 +22,8 @@
 
 #include "open_desktop_entry.h"
 
+#include <miral/version.h>
+
 #include <linux/input.h>
 #include <xkbcommon/xkbcommon.h>
 
@@ -210,7 +212,7 @@ auto list_desktop_files() -> file_list
 
 struct egmde::Launcher::Self : egmde::FullscreenClient
 {
-    Self(wl_display* display, ExternalClientLauncher& external_client_launcher);
+    Self(wl_display* display, ExternalClientLauncher& external_client_launcher, miral::MirRunner const& runner);
 
     void draw_screen(SurfaceInfo& info) const override;
     void show_screen(SurfaceInfo& info) const;
@@ -237,6 +239,7 @@ private:
 private:
 
     ExternalClientLauncher& external_client_launcher;
+    miral::MirRunner const& runner;
 
     int pointer_y = 0;
     int height = 0;
@@ -249,8 +252,8 @@ private:
     std::atomic<Output const*> mutable showing{nullptr};
 };
 
-egmde::Launcher::Launcher(miral::ExternalClientLauncher& external_client_launcher) :
-    external_client_launcher{external_client_launcher}
+egmde::Launcher::Launcher(miral::ExternalClientLauncher& external_client_launcher, miral::MirRunner const& runner) :
+    external_client_launcher{external_client_launcher}, runner{runner}
 {
 }
 
@@ -274,7 +277,7 @@ void egmde::Launcher::show()
 
 void egmde::Launcher::operator()(wl_display* display)
 {
-    auto client = std::make_shared<Self>(display, external_client_launcher);
+    auto client = std::make_shared<Self>(display, external_client_launcher, runner);
     self = client;
     client->run(display);
 
@@ -480,14 +483,28 @@ void egmde::Launcher::Self::run_app()
     }
     else
     {
+        std::vector<std::string> env{
+            "XDG_SESSION_TYPE=mir",
+            "GDK_BACKEND=wayland",
+            "QT_QPA_PLATFORM=wayland",
+            "SDL_VIDEODRIVER=wayland"};
+
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 8, 0)
+        if (auto const& wayland_display = runner.wayland_display())
+        {
+            env.push_back("WAYLAND_DISPLAY=" + wayland_display.value());
+        }
+
+        if (auto const& x11_display = runner.x11_display())
+        {
+            env.push_back("DISPLAY=" + x11_display.value());
+        }
+#else
         // In egmde there's no way to get the correct WAYLAND_DISPLAY value,
         // but hard-coding it here allows the interface to be tried out
-        open_desktop_entry(current_app->desktop_file,
-            {"WAYLAND_DISPLAY=wayland-0",
-             "XDG_SESSION_TYPE=mir",
-             "GDK_BACKEND=wayland",
-             "QT_QPA_PLATFORM=wayland",
-             "SDL_VIDEODRIVER=wayland"});
+        env.push_back("WAYLAND_DISPLAY=wayland-0");
+#endif
+        open_desktop_entry(current_app->desktop_file, env);
     }
 
     running = false;
@@ -512,9 +529,10 @@ void egmde::Launcher::Self::prev_app()
     for_each_surface([this](auto& info) { draw_screen(info); });
 }
 
-egmde::Launcher::Self::Self(wl_display* display, ExternalClientLauncher& external_client_launcher) :
+egmde::Launcher::Self::Self(wl_display* display, ExternalClientLauncher& external_client_launcher, MirRunner const& runner) :
     FullscreenClient{display},
-    external_client_launcher{external_client_launcher}
+    external_client_launcher{external_client_launcher},
+    runner{runner}
 {
     wl_display_roundtrip(display);
     wl_display_roundtrip(display);

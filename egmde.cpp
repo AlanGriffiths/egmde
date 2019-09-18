@@ -43,7 +43,7 @@ int main(int argc, char const* argv[])
     egmde::Wallpaper wallpaper;
 
     ExternalClientLauncher external_client_launcher;
-    egmde::Launcher launcher{external_client_launcher};
+    egmde::Launcher launcher{external_client_launcher, runner};
 
     auto const keyboard_shortcuts = [&](MirEvent const* event)
         {

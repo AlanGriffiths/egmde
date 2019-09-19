@@ -24,7 +24,6 @@
 
 namespace egmde
 {
-void open_desktop_entry(std::string const& desktop_file);
 void open_desktop_entry(std::string const& desktop_file, std::vector<std::string> const& env);
 }
 

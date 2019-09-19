@@ -74,46 +74,6 @@ auto extract_id(std::string const& filename) -> std::string
 }
 }
 
-void egmde::open_desktop_entry(std::string const& desktop_file)
-{
-    Connection const connection{g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr)};
-
-    static char const* const dest = "io.snapcraft.Launcher";
-    static char const* const object_path = "/io/snapcraft/Launcher";
-    static char const* const interface_name = "io.snapcraft.Launcher";
-    static char const* const method_name = "OpenDesktopEntry";
-    auto const id = extract_id(desktop_file);
-
-    // For some reason, if this autostarts userd, then the call fails
-    // but as userd has now been started, a second attempt succeeds
-    for (int tries = 0; tries != 2; ++tries)
-    {
-        GError* error = nullptr;
-
-        if (auto const result = g_dbus_connection_call_sync(connection,
-                                                            dest,
-                                                            object_path,
-                                                            interface_name,
-                                                            method_name,
-                                                            g_variant_new("(s)", id.c_str()),
-                                                            nullptr,
-                                                            G_DBUS_CALL_FLAGS_NONE,
-                                                            G_MAXINT,
-                                                            nullptr,
-                                                            &error))
-        {
-            g_variant_unref(result);
-            break;
-        }
-
-        if (error)
-        {
-            puts(error->message);
-            g_error_free(error);
-        }
-    }
-}
-
 void egmde::open_desktop_entry(std::string const& desktop_file, std::vector<std::string> const& env)
 {
     Connection const connection{g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr)};

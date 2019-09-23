@@ -484,10 +484,8 @@ void egmde::Launcher::Self::run_app()
     else
     {
         std::vector<std::string> env{
-            "XDG_SESSION_TYPE=mir",
-            "GDK_BACKEND=wayland",
-            "QT_QPA_PLATFORM=wayland",
-            "SDL_VIDEODRIVER=wayland"};
+            "XDG_SESSION_DESKTOP=mir",
+            "XDG_SESSION_TYPE=wayland"};
 
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 8, 0)
         if (auto const& wayland_display = runner.wayland_display())

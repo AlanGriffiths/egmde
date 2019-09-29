@@ -21,12 +21,10 @@
 
 #include <miral/command_line_option.h>
 #include <miral/internal_client.h>
-#include <miral/keymap.h>
 #include <miral/runner.h>
 #include <miral/append_event_filter.h>
 #include <miral/external_client.h>
 #include <miral/keymap.h>
-#include <miral/minimal_window_manager.h>
 #include <miral/set_window_management_policy.h>
 
 #include <linux/input.h>

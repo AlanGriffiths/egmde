@@ -84,39 +84,32 @@ void egmde::open_desktop_entry(std::string const& desktop_file, std::vector<std:
     static char const* const method_name = "OpenDesktopEntryEnv";
     auto const id = extract_id(desktop_file);
 
-    // For some reason, if this autostarts userd, then the call fails
-    // but as userd has now been started, a second attempt succeeds
-    for (int tries = 0; tries != 2; ++tries)
+    GError* error = nullptr;
+
+    GVariantBuilder* const builder = g_variant_builder_new(G_VARIANT_TYPE ("as"));
+    for (auto const& e : env)
+        g_variant_builder_add (builder, "s", e.c_str());
+
+    if (auto const result = g_dbus_connection_call_sync(connection,
+                                                        dest,
+                                                        object_path,
+                                                        interface_name,
+                                                        method_name,
+                                                        g_variant_new("(sas)", id.c_str(), builder),
+                                                        nullptr,
+                                                        G_DBUS_CALL_FLAGS_NONE,
+                                                        G_MAXINT,
+                                                        nullptr,
+                                                        &error))
     {
-        GError* error = nullptr;
-
-        GVariantBuilder* const builder = g_variant_builder_new(G_VARIANT_TYPE ("as"));
-        for (auto const& e : env)
-            g_variant_builder_add (builder, "s", e.c_str());
-
-        if (auto const result = g_dbus_connection_call_sync(connection,
-                                                            dest,
-                                                            object_path,
-                                                            interface_name,
-                                                            method_name,
-                                                            g_variant_new("(sas)", id.c_str(), builder),
-                                                            nullptr,
-                                                            G_DBUS_CALL_FLAGS_NONE,
-                                                            G_MAXINT,
-                                                            nullptr,
-                                                            &error))
-        {
-            g_variant_unref(result);
-            g_variant_builder_unref(builder);
-            break;
-        }
-
-        if (error)
-        {
-            puts(error->message);
-            g_error_free(error);
-        }
-
-        g_variant_builder_unref(builder);
+        g_variant_unref(result);
     }
+
+    if (error)
+    {
+        puts(error->message);
+        g_error_free(error);
+    }
+
+    g_variant_builder_unref(builder);
 }

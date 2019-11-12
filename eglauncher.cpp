@@ -132,16 +132,29 @@ auto load_details() -> std::vector<app_details>
         std::string exec;
         std::string icon;
 
+        auto in_desktop_entry = false;
+
         while (std::getline(in, line))
         {
-            if (line.find(categories_key) == 0)
-                categories = line.substr(categories_key.length()) + ";";
-            else if (line.find(name_key) == 0 && name.empty())
-                name = line.substr(name_key.length());
-            else if (line.find(exec_key) == 0)
-                exec = line.substr(exec_key.length());
-            else if (line.find(icon_key) == 0)
-                icon = line.substr(icon_key.length());
+            if (line == "[Desktop Entry]")
+            {
+                in_desktop_entry = true;
+            }
+            else if (line.find("[Desktop Action") == 0)
+            {
+                in_desktop_entry = false;
+            }
+            else if (in_desktop_entry)
+            {
+                if (line.find(categories_key) == 0)
+                    categories = line.substr(categories_key.length()) + ";";
+                else if (line.find(name_key) == 0 && name.empty())
+                    name = line.substr(name_key.length());
+                else if (line.find(exec_key) == 0)
+                    exec = line.substr(exec_key.length());
+                else if (line.find(icon_key) == 0)
+                    icon = line.substr(icon_key.length());
+            }
         }
 
         auto app = exec;

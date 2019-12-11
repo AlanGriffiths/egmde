@@ -59,6 +59,23 @@ auto ends_with_desktop(std::string const &full_string) -> bool
     return !full_string.compare(full_string.length() - desktop.length(), desktop.length(), desktop);
 }
 
+void scan_directory_for_desktop_files(file_list& list, boost::filesystem::path const& path)
+try
+{
+    for (boost::filesystem::directory_iterator i(path), end; i != end; ++i)
+    {
+        if (is_directory(*i))
+        {
+            scan_directory_for_desktop_files(list, *i);
+        }
+        else if (ends_with_desktop(i->path().filename().string()))
+        {
+            list.push_back(i->path());
+        }
+    }
+}
+catch (std::exception const&){}
+
 auto scan_for_desktop_files(std::vector<boost::filesystem::path> const& paths) -> file_list
 {
     file_list list;
@@ -66,17 +83,9 @@ auto scan_for_desktop_files(std::vector<boost::filesystem::path> const& paths) -
     for (auto const& path : paths)
     {
         if (is_directory(path))
-        try
         {
-            for (boost::filesystem::directory_iterator i(path), end; i != end; ++i)
-            {
-                if (!is_directory(*i) && ends_with_desktop(i->path().filename().string()))
-                {
-                    list.push_back(i->path());
-                }
-            }
+            scan_directory_for_desktop_files(list, path);
         }
-        catch (std::exception const&){}
     }
 
     return list;

@@ -258,9 +258,10 @@ struct egmde::Launcher::Self : egmde::FullscreenClient
     void run_app(std::string app) const;
 
 private:
+    enum class Mode { wayland, x11, wayland_debug, x11_debug};
     void prev_app();
     void next_app();
-    void run_app();
+    void run_app(Mode mode = Mode::wayland);
 
     void keyboard_key(wl_keyboard* keyboard, uint32_t serial, uint32_t time, uint32_t key, uint32_t state) override;
     void keyboard_leave(wl_keyboard* keyboard, uint32_t serial, wl_surface* surface) override;
@@ -366,6 +367,10 @@ void egmde::Launcher::Self::keyboard_key(wl_keyboard* /*keyboard*/, uint32_t /*s
         case XKB_KEY_Return:
         case XKB_KEY_space:
             run_app();
+            break;
+
+        case XKB_KEY_F1:
+            run_app(Mode::wayland_debug);
             break;
 
         case XKB_KEY_Escape:
@@ -474,7 +479,7 @@ void egmde::Launcher::Self::touch_down(
     FullscreenClient::touch_down(touch, serial, time, surface, id, x, y);
 }
 
-void egmde::Launcher::Self::run_app()
+void egmde::Launcher::Self::run_app(Mode mode)
 {
     auto app = current_app->exec;
 
@@ -523,13 +528,26 @@ void egmde::Launcher::Self::run_app(std::string app) const
         command.emplace_back(start);
     }
 
-    for (start = app.c_str(); (end = strchr(start, ' ')); start = end+1)
+    if (mode == Mode::wayland_debug || mode == Mode::x11_debug)
     {
-        if (start != end)
-            command.emplace_back(start, end);
+        command.emplace_back("gnome-terminal");
+        if (boost::filesystem::exists("/usr/bin/gnome-terminal.real"))
+            command.emplace_back("--disable-factory");
+        command.emplace_back("--");
+        command.emplace_back("bash");
+        command.emplace_back("-c");
+        command.emplace_back(app + ";read -p \"Press any key to continue... \" -n1 -s");
     }
+    else
+    {
+        for (start = app.c_str(); (end = strchr(start, ' ')); start = end+1)
+        {
+            if (start != end)
+                command.emplace_back(start, end);
+        }
 
-    command.emplace_back(start);
+        command.emplace_back(start);
+    }
 
     this->external_client_launcher.launch(command);
 }

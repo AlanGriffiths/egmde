@@ -22,15 +22,13 @@
 
 #include <miral/append_event_filter.h>
 #include <miral/command_line_option.h>
-#include <miral/display_configuration_option.h>
+#include <miral/display_configuration.h>
 #include <miral/internal_client.h>
 #include <miral/keymap.h>
 #include <miral/runner.h>
 #include <miral/set_window_management_policy.h>
 #include <miral/wayland_extensions.h>
-
 #include <miral/x11_support.h>
-#include <miral/display_configuration.h>
 
 #include <boost/filesystem.hpp>
 #include <linux/input.h>
@@ -85,6 +83,9 @@ int main(int argc, char const* argv[])
             switch (mir_keyboard_event_scan_code(kev))
             {
             case KEY_A:launcher.show();
+                return true;
+
+            case KEY_T: external_client_launcher.launch({terminal_cmd});
                 return true;
 
             case KEY_BACKSPACE:

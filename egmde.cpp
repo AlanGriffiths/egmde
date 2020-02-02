@@ -18,18 +18,38 @@
 
 #include "egwallpaper.h"
 #include "egwindowmanager.h"
+#include "eglauncher.h"
 
+#include <miral/append_event_filter.h>
 #include <miral/command_line_option.h>
 #include <miral/internal_client.h>
-#include <miral/runner.h>
-#include <miral/append_event_filter.h>
-#include <miral/external_client.h>
 #include <miral/keymap.h>
+#include <miral/runner.h>
 #include <miral/set_window_management_policy.h>
 
+#include <boost/filesystem.hpp>
 #include <linux/input.h>
 
 using namespace miral;
+
+namespace
+{
+// Neither xdg-terminal nor x-terminal-emulator is guaranteed to exist,
+// and neither is a good way to identify user preference...
+std::string const terminal_cmd = []() -> std::string
+    {
+        auto const user_bin = "/usr/bin/";
+
+        for (std::string name : { "weston-terminal", "gnome-terminal", "konsole",
+                                  "qterminal", "lxterminal", "xdg-terminal"})
+        {
+            if (boost::filesystem::exists(user_bin + name))
+                return name;
+        }
+
+        return "x-terminal-emulator";
+    }();
+}
 
 int main(int argc, char const* argv[])
 {
@@ -37,9 +57,8 @@ int main(int argc, char const* argv[])
 
     egmde::Wallpaper wallpaper;
 
-    runner.add_stop_callback([&] { wallpaper.stop(); });
-
     ExternalClientLauncher external_client_launcher;
+    egmde::Launcher launcher{external_client_launcher};
 
     auto const keyboard_shortcuts = [&](MirEvent const* event)
         {
@@ -60,12 +79,14 @@ int main(int argc, char const* argv[])
 
             switch (mir_keyboard_event_scan_code(kev))
             {
+            case KEY_A:launcher.show();
+                return true;
+
             case KEY_BACKSPACE:
                 runner.stop();
                 return true;
 
-            case KEY_T:
-                external_client_launcher.launch({"weston-terminal"});
+            case KEY_T: external_client_launcher.launch({terminal_cmd});
                 return true;
 
             default:
@@ -73,16 +94,54 @@ int main(int argc, char const* argv[])
             }
         };
 
+    auto touch_shortcuts = [&, gesture = false](MirEvent const* event) mutable
+        {
+            if (mir_event_get_type(event) != mir_event_type_input)
+                return false;
+
+            auto const* input_event = mir_event_get_input_event(event);
+            if (mir_input_event_get_type(input_event) != mir_input_event_type_touch)
+                return false;
+
+            auto const* tev = mir_input_event_get_touch_event(input_event);
+
+            if (gesture)
+            {
+                if (mir_touch_event_action(tev, 0) == mir_touch_action_up)
+                    gesture = false;
+                return true;
+            }
+
+            if (mir_touch_event_point_count(tev) != 1)
+                return false;
+
+            if (mir_touch_event_action(tev, 0) != mir_touch_action_down)
+                return false;
+
+            if (mir_touch_event_axis_value(tev, 0, mir_touch_axis_x) >= 5)
+                return false;
+
+            launcher.show();
+            gesture = true;
+            return true;
+        };
+
+
+    runner.add_stop_callback([&] { wallpaper.stop(); });
+    runner.add_stop_callback([&] { launcher.stop(); });
+
     return runner.run_with(
         {
             set_window_management_policy<egmde::WindowManager>(wallpaper),
             external_client_launcher,
             AppendEventFilter{keyboard_shortcuts},
+            AppendEventFilter{touch_shortcuts},
             Keymap{},
             CommandLineOption{[&](auto& option) { wallpaper.top(option);},
                               "wallpaper-top",    "Colour of wallpaper RGB", "0x000000"},
             CommandLineOption{[&](auto& option) { wallpaper.bottom(option);},
                               "wallpaper-bottom", "Colour of wallpaper RGB", EGMDE_WALLPAPER_BOTTOM},
             StartupInternalClient{std::ref(wallpaper)},
+            StartupInternalClient{std::ref(launcher)}
         });
 }

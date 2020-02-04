@@ -38,7 +38,7 @@ namespace egmde
 class FullscreenClient
 {
 public:
-    FullscreenClient(wl_display* display);
+    explicit FullscreenClient(wl_display* display);
 
     virtual ~FullscreenClient();
 
@@ -46,7 +46,7 @@ public:
 
     void stop();
 
-    auto make_shm_pool(int size, void** data) const
+    auto make_shm_pool(size_t size, void** data) const
     -> std::unique_ptr<wl_shm_pool, void (*)(wl_shm_pool*)>;
 
     wl_display* display = nullptr;
@@ -109,30 +109,10 @@ public:
 
     struct SurfaceInfo
     {
-        SurfaceInfo(Output const* output) :
-            output{output} {}
+        SurfaceInfo(Output const* output);
+        ~SurfaceInfo();
 
-        ~SurfaceInfo()
-        {
-            clear_window();
-        }
-
-        void clear_window()
-        {
-            if (buffer)
-                wl_buffer_destroy(buffer);
-
-            if (shell_surface)
-                wl_shell_surface_destroy(shell_surface);
-
-            if (surface)
-                wl_surface_destroy(surface);
-
-
-            buffer = nullptr;
-            shell_surface = nullptr;
-            surface = nullptr;
-        }
+        void clear_window();
 
         // Screen description
         Output const* output;
@@ -230,19 +210,16 @@ private:
     wl_seat* seat = nullptr;
     wl_shm* shm = nullptr;
 
-    static void new_global(
-        void* data,
+    void new_global(
         struct wl_registry* registry,
         uint32_t id,
         char const* interface,
         uint32_t version);
 
-    static void remove_global(
-        void* data,
+    void remove_global(
         struct wl_registry* registry,
         uint32_t name);
 
-    static void add_seat_listener(FullscreenClient* self, wl_seat* seat);
     void seat_capabilities(wl_seat* seat, uint32_t capabilities);
     void seat_name(wl_seat* seat, const char* name);
 

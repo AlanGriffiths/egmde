@@ -32,9 +32,29 @@
 #include <miral/x11_support.h>
 #include <miral/display_configuration.h>
 
+#include <boost/filesystem.hpp>
 #include <linux/input.h>
 
 using namespace miral;
+
+namespace
+{
+// Neither xdg-terminal nor x-terminal-emulator is guaranteed to exist,
+// and neither is a good way to identify user preference...
+std::string const terminal_cmd = []() -> std::string
+    {
+        auto const user_bin = "/usr/bin/";
+
+        for (std::string name : { "weston-terminal", "gnome-terminal", "konsole",
+                                  "qterminal", "lxterminal", "xdg-terminal"})
+        {
+            if (boost::filesystem::exists(user_bin + name))
+                return name;
+        }
+
+        return "x-terminal-emulator";
+    }();
+}
 
 int main(int argc, char const* argv[])
 {
@@ -69,6 +89,9 @@ int main(int argc, char const* argv[])
 
             case KEY_BACKSPACE:
                 runner.stop();
+                return true;
+
+            case KEY_T: external_client_launcher.launch({terminal_cmd});
                 return true;
 
             default:

@@ -216,11 +216,30 @@ auto load_details() -> std::vector<app_details>
 
 auto list_desktop_files() -> file_list
 {
-    std::string search_path{"~/.local/share/applications:/usr/share/applications:/var/lib/snapd/desktop/applications"};
-    if (char const* desktop_path = getenv("EGMDE_DESKTOP_PATH"))
-        search_path = desktop_path;
-    // search_paths relies on a ":" sentinal value
-    search_path +=  ":";
+    std::string search_path;
+    if (auto const* start = getenv("XDG_DATA_DIRS"))
+    {
+        for (auto const* end = start;
+            *end && ((end = strchr(start, ':')) || (end = strchr(start, '\0')));
+            start = end+1)
+        {
+            if (start == end) continue;
+
+            if (strncmp(start, "~/", 2) != 0)
+            {
+                search_path += std::string{start, end} + "/applications:";
+            }
+            else if (auto const home = getenv("HOME"))
+            {
+                search_path += home + std::string{start + 1, end} + "/applications:";
+            }
+        }
+    }
+    else
+    {
+        search_path = "/usr/local/share/applications:/usr/share/applications:/var/lib/snapd/desktop/applications:";
+    }
+
     auto const paths = search_paths(search_path.c_str());
     return scan_for_desktop_files(paths);
 

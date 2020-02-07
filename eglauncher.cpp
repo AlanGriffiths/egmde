@@ -255,6 +255,7 @@ struct egmde::Launcher::Self : egmde::FullscreenClient
     void clear_screen(SurfaceInfo& info) const;
 
     void start();
+    void run_app(std::string app) const;
 
 private:
     void prev_app();
@@ -319,6 +320,14 @@ void egmde::Launcher::operator()(wl_display* display)
     // Possibly need to wait for stop() to release the client.
     // (This would be less ugly with a ref-counted wrapper for wl_display* in the miral API)
     std::lock_guard<decltype(mutex)> lock{mutex};
+}
+
+void egmde::Launcher::run_app(std::string app) const
+{
+    if (auto ss = self.lock())
+    {
+        ss->run_app(app);
+    }
 }
 
 void egmde::Launcher::Self::start()
@@ -467,10 +476,19 @@ void egmde::Launcher::Self::touch_down(
 
 void egmde::Launcher::Self::run_app()
 {
+    auto app = current_app->exec;
+
+    run_app(app);
+
+    running = false;
+    for_each_surface([this](auto& info) { draw_screen(info); });
+}
+
+void egmde::Launcher::Self::run_app(std::string app) const
+{
     setenv("NO_AT_BRIDGE", "1", 1);
     unsetenv("DISPLAY");
 
-    auto app = current_app->exec;
     auto ws = app.find('%');
     if (ws != std::string::npos)
     {
@@ -513,10 +531,7 @@ void egmde::Launcher::Self::run_app()
 
     command.emplace_back(start);
 
-    external_client_launcher.launch(command);
-
-    running = false;
-    for_each_surface([this](auto& info) { draw_screen(info); });
+    this->external_client_launcher.launch(command);
 }
 
 void egmde::Launcher::Self::next_app()

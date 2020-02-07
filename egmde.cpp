@@ -91,7 +91,7 @@ int main(int argc, char const* argv[])
                 runner.stop();
                 return true;
 
-            case KEY_T: external_client_launcher.launch({terminal_cmd});
+            case KEY_T: launcher.run_app(terminal_cmd);
                 return true;
 
             default:

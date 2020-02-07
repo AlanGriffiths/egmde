@@ -41,6 +41,7 @@ public:
     void show();
 
     void stop();
+    void run_app(std::string app) const;
 
 private:
     miral::ExternalClientLauncher& external_client_launcher;

@@ -41,29 +41,18 @@ namespace
 {
 // Neither xdg-terminal nor x-terminal-emulator is guaranteed to exist,
 // and neither is a good way to identify user preference...
-std::vector<std::string> const terminal_cmd = []() -> decltype(terminal_cmd)
+std::string const terminal_cmd = []() -> std::string
     {
-        using boost::filesystem::exists;
         auto const user_bin = "/usr/bin/";
 
-        for (std::string name : { "weston-terminal", "qterminal", "gnome-terminal",
-                                  "konsole", "lxterminal", "xdg-terminal"})
+        for (std::string name : { "weston-terminal", "gnome-terminal", "konsole",
+                                  "qterminal", "lxterminal", "xdg-terminal"})
         {
-            if (exists(user_bin + name))
-            {
-                if ((name == "gnome-terminal") && exists("/usr/bin/gnome-terminal.real"))
-                {
-                    // Fixup for weird gnome-terminal script on Ubuntu
-                    return {name, "--disable-factory"};
-                }
-                else
-                {
-                    return {name};
-                }
-            }
+            if (boost::filesystem::exists(user_bin + name))
+                return name;
         }
 
-        return {"x-terminal-emulator"};
+        return "x-terminal-emulator";
     }();
 }
 
@@ -102,8 +91,7 @@ int main(int argc, char const* argv[])
                 runner.stop();
                 return true;
 
-            case KEY_T: external_client_launcher.launch(terminal_cmd);
-                for (auto s : terminal_cmd) puts(s.c_str());
+            case KEY_T: external_client_launcher.launch({terminal_cmd});
                 return true;
 
             default:

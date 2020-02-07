@@ -41,7 +41,9 @@ public:
     void show();
 
     void stop();
-    void run_app(std::string app) const;
+
+    enum class Mode { wayland, x11, wayland_debug, x11_debug};
+    void run_app(std::string app, Mode mode) const;
 
 private:
     miral::ExternalClientLauncher& external_client_launcher;

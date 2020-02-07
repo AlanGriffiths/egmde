@@ -85,14 +85,14 @@ int main(int argc, char const* argv[])
             case KEY_A:launcher.show();
                 return true;
 
-            case KEY_T: external_client_launcher.launch({terminal_cmd});
-                return true;
-
             case KEY_BACKSPACE:
                 runner.stop();
                 return true;
 
-            case KEY_T: launcher.run_app(terminal_cmd);
+            case KEY_T: launcher.run_app(terminal_cmd, egmde::Launcher::Mode::wayland);
+                return true;
+
+            case KEY_X: launcher.run_app(terminal_cmd, egmde::Launcher::Mode::x11);
                 return true;
 
             default:

@@ -20,6 +20,7 @@
 #include "egfullscreenclient.h"
 #include "printer.h"
 
+#include <miral/version.h>
 #include <linux/input.h>
 #include <xkbcommon/xkbcommon.h>
 
@@ -255,10 +256,9 @@ struct egmde::Launcher::Self : egmde::FullscreenClient
     void clear_screen(SurfaceInfo& info) const;
 
     void start();
-    void run_app(std::string app) const;
 
+    void run_app(std::string app, Mode mode) const;
 private:
-    enum class Mode { wayland, x11, wayland_debug, x11_debug};
     void prev_app();
     void next_app();
     void run_app(Mode mode = Mode::wayland);
@@ -323,11 +323,11 @@ void egmde::Launcher::operator()(wl_display* display)
     std::lock_guard<decltype(mutex)> lock{mutex};
 }
 
-void egmde::Launcher::run_app(std::string app) const
+void egmde::Launcher::run_app(std::string app, Mode mode) const
 {
     if (auto ss = self.lock())
     {
-        ss->run_app(app);
+        ss->run_app(app, mode);
     }
 }
 
@@ -369,8 +369,16 @@ void egmde::Launcher::Self::keyboard_key(wl_keyboard* /*keyboard*/, uint32_t /*s
             run_app();
             break;
 
-        case XKB_KEY_F1:
+        case XKB_KEY_BackSpace:
+            run_app(Mode::x11);
+            break;
+
+        case XKB_KEY_F11:
             run_app(Mode::wayland_debug);
+            break;
+
+        case XKB_KEY_F12:
+            run_app(Mode::x11_debug);
             break;
 
         case XKB_KEY_Escape:
@@ -483,13 +491,13 @@ void egmde::Launcher::Self::run_app(Mode mode)
 {
     auto app = current_app->exec;
 
-    run_app(app);
+    run_app(app, mode);
 
     running = false;
     for_each_surface([this](auto& info) { draw_screen(info); });
 }
 
-void egmde::Launcher::Self::run_app(std::string app) const
+void egmde::Launcher::Self::run_app(std::string app, Mode mode) const
 {
     setenv("NO_AT_BRIDGE", "1", 1);
     unsetenv("DISPLAY");
@@ -528,8 +536,10 @@ void egmde::Launcher::Self::run_app(std::string app) const
         command.emplace_back(start);
     }
 
-    if (mode == Mode::wayland_debug || mode == Mode::x11_debug)
+    switch (mode)
     {
+    case Mode::wayland_debug:
+    case Mode::x11_debug:
         command.emplace_back("gnome-terminal");
         if (boost::filesystem::exists("/usr/bin/gnome-terminal.real"))
             command.emplace_back("--disable-factory");
@@ -537,9 +547,10 @@ void egmde::Launcher::Self::run_app(std::string app) const
         command.emplace_back("bash");
         command.emplace_back("-c");
         command.emplace_back(app + ";read -p \"Press any key to continue... \" -n1 -s");
-    }
-    else
-    {
+        break;
+
+    case Mode::wayland:
+    case Mode::x11:
         for (start = app.c_str(); (end = strchr(start, ' ')); start = end+1)
         {
             if (start != end)
@@ -547,9 +558,25 @@ void egmde::Launcher::Self::run_app(std::string app) const
         }
 
         command.emplace_back(start);
+        break;
     }
 
-    this->external_client_launcher.launch(command);
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 9, 0)
+    switch (mode)
+    {
+    case Mode::wayland:
+    case Mode::wayland_debug:
+        external_client_launcher.launch(command);
+        break;
+
+    case Mode::x11:
+    case Mode::x11_debug:
+        external_client_launcher.launch_using_x11(command);
+        break;
+    }
+#else
+    external_client_launcher.launch(command);
+#endif
 }
 
 void egmde::Launcher::Self::next_app()
@@ -652,9 +679,14 @@ void egmde::Launcher::Self::show_screen(SurfaceInfo& info) const
 
     static Printer printer;
     printer.print(width, height, content_area, current_app->title);
-    printer.footer(
-        width, height, content_area,
-        {"<Enter> = start app | Arrow keys = change app | initial letter = change app | <Esc> = cancel", ""});
+    auto const help =
+        "<Enter> = start app | "
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 9, 0)
+        "<BkSp> = start X11 app | "
+#endif
+        "Arrows (or initial letter) = change app | <Esc> = cancel";
+
+    printer.footer(width, height, content_area, {help, ""});
 
     wl_surface_attach(info.surface, info.buffer, 0, 0);
     wl_surface_commit(info.surface);

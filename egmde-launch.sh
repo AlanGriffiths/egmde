@@ -26,7 +26,6 @@ if [ ! -d "${XDG_RUNTIME_DIR}" ]; then echo "Error: XDG_RUNTIME_DIR '${XDG_RUNTI
 keymap_index=$(gsettings get org.gnome.desktop.input-sources current | cut -d\  -f 2)
 keymap=$(gsettings get org.gnome.desktop.input-sources sources | grep -Po "'[[:alpha:]]+'\)" | sed -ne "s/['|)]//g;$(($keymap_index+1))p")
 
-export MIR_SERVER_WAYLAND_SOCKET_NAME=${wayland_display}
 export MIR_SERVER_FILE=${socket}
 export MIR_SERVER_KEYMAP=${keymap}
 exec ${bindir}egmde "$@"

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2019 Octopull Limited.
+ * Copyright © 2016-2020 Octopull Limited.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -120,6 +120,20 @@ struct app_details
     std::string title;
 };
 
+auto unescape(std::string const& in) -> std::string
+{
+    std::string result;
+    bool escape = false;
+
+    for (auto c : in)
+    {
+        if (!(escape = (!escape && c == '\\')))
+            result += c;
+    }
+
+    return result;
+}
+
 auto load_details() -> std::vector<app_details>
 {
     static std::string const categories_key{"Categories="};
@@ -161,7 +175,7 @@ auto load_details() -> std::vector<app_details>
                 else if (line.find(name_key) == 0 && name.empty())
                     name = line.substr(name_key.length());
                 else if (line.find(exec_key) == 0)
-                    exec = line.substr(exec_key.length());
+                    exec = unescape(line.substr(exec_key.length()));
                 else if (line.find(icon_key) == 0)
                     icon = line.substr(icon_key.length());
             }
@@ -551,13 +565,72 @@ void egmde::Launcher::Self::run_app(std::string app, Mode mode) const
 
     case Mode::wayland:
     case Mode::x11:
-        for (start = app.c_str(); (end = strchr(start, ' ')); start = end+1)
         {
-            if (start != end)
-                command.emplace_back(start, end);
-        }
+            std::string token;
+            char in_quote = '\0';
+            bool escaping = false;
 
-        command.emplace_back(start);
+            auto push_token = [&]()
+                {
+                    if (!token.empty())
+                    {
+                        command.push_back(std::move(token));
+                        token.clear();
+                    }
+                };
+
+            for (auto c : app)
+            {
+                if (escaping)
+                {
+                    // end escape
+                    escaping = false;
+                    token += c;
+                    continue;
+                }
+
+                switch (c)
+                {
+                case '\\':
+                    // start escape
+                    escaping = true;
+                    continue;
+
+                case '\'':
+                case '\"':
+                    if (in_quote == '\0')
+                    {
+                        // start quoted sequence
+                        in_quote = c;
+                        continue;
+                    }
+                    else if (c == in_quote)
+                    {
+                        // end quoted sequence
+                        in_quote = '\0';
+                        continue;
+                    }
+                    else
+                    {
+                        break;
+                    }
+
+                default:
+                    break;
+                }
+
+                if (!isspace(c) || in_quote)
+                {
+                    token += c;
+                }
+                else
+                {
+                    push_token();
+                }
+            }
+
+            push_token();
+        }
         break;
     }
 

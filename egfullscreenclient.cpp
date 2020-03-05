@@ -625,8 +625,10 @@ void egmde::FullscreenClient::seat_capabilities(wl_seat* seat, uint32_t capabili
             [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->touch_motion(args...); },
             [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->touch_frame(args...); },
             [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->touch_cancel(args...); },
-#if WL_TOUCH_RELEASE >= 1
+#ifdef WL_TOUCH_SHAPE_SINCE_VERSION
             [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->touch_shape(args...); },
+#endif
+#ifdef WL_TOUCH_ORIENTATION_SINCE_VERSION
             [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->touch_orientation(args...); },
 #endif
         };

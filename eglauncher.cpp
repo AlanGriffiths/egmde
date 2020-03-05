@@ -358,7 +358,7 @@ void egmde::Launcher::Self::start()
             current_app = new_terminal;
 
         showing = nullptr;
-        for_each_surface([this](auto& info) { draw_screen(info);});
+        for_each_surface([this](auto& info) { this->draw_screen(info);});
     }
 }
 
@@ -397,7 +397,7 @@ void egmde::Launcher::Self::keyboard_key(wl_keyboard* /*keyboard*/, uint32_t /*s
 
         case XKB_KEY_Escape:
             running = false;
-            for_each_surface([this](auto& info) { draw_screen(info); });
+            for_each_surface([this](auto& info) { this->draw_screen(info); });
             break;
 
         default:
@@ -423,7 +423,7 @@ void egmde::Launcher::Self::keyboard_key(wl_keyboard* /*keyboard*/, uint32_t /*s
                 if (p != apps.end())
                 {
                     current_app = p;
-                    for_each_surface([this](auto& info) { draw_screen(info); });
+                    for_each_surface([this](auto& info) { this->draw_screen(info); });
                 }
             }
         }
@@ -508,7 +508,7 @@ void egmde::Launcher::Self::run_app(Mode mode)
     run_app(app, mode);
 
     running = false;
-    for_each_surface([this](auto& info) { draw_screen(info); });
+    for_each_surface([this](auto& info) { this->draw_screen(info); });
 }
 
 void egmde::Launcher::Self::run_app(std::string app, Mode mode) const
@@ -657,7 +657,7 @@ void egmde::Launcher::Self::next_app()
     if (++current_app == apps.end())
         current_app = apps.begin();
 
-    for_each_surface([this](auto& info) { draw_screen(info); });
+    for_each_surface([this](auto& info) { this->draw_screen(info); });
 }
 
 void egmde::Launcher::Self::prev_app()
@@ -667,7 +667,7 @@ void egmde::Launcher::Self::prev_app()
 
     --current_app;
 
-    for_each_surface([this](auto& info) { draw_screen(info); });
+    for_each_surface([this](auto& info) { this->draw_screen(info); });
 }
 
 egmde::Launcher::Self::Self(wl_display* display, ExternalClientLauncher& external_client_launcher) :
@@ -773,5 +773,5 @@ void egmde::Launcher::Self::clear_screen(SurfaceInfo& info) const
 void egmde::Launcher::Self::keyboard_leave(wl_keyboard* /*keyboard*/, uint32_t /*serial*/, wl_surface* /*surface*/)
 {
     running = false;
-    for_each_surface([this](auto& info) { draw_screen(info); });
+    for_each_surface([this](auto& info) { this->draw_screen(info); });
 }

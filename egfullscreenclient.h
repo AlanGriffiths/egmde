@@ -28,6 +28,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <unordered_map>
 
 struct xkb_context;
 struct xkb_keymap;

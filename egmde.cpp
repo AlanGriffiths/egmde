@@ -22,7 +22,7 @@
 
 #include <miral/append_event_filter.h>
 #include <miral/command_line_option.h>
-#include <miral/display_configuration.h>
+#include <miral/display_configuration_option.h>
 #include <miral/internal_client.h>
 #include <miral/keymap.h>
 #include <miral/runner.h>
@@ -140,7 +140,7 @@ int main(int argc, char const* argv[])
         {
             X11Support{},
             WaylandExtensions{},
-            DisplayConfiguration{runner},
+            display_configuration_options,
             CommandLineOption{[&](auto& option) { wallpaper.top(option);},
                               "wallpaper-top",    "Colour of wallpaper RGB", "0x000000"},
             CommandLineOption{[&](auto& option) { wallpaper.bottom(option);},

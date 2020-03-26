@@ -25,19 +25,26 @@ namespace
 {
 auto default_font() -> char const*
 {
-    char const* const default_file = "FreeSansBold.ttf";
-
-    static std::string result{default_file};
+    static std::string result;
 
     char const* const debian_path = "/usr/share/fonts/truetype/freefont/";
     char const* const fedora_path = "/usr/share/fonts/gnu-free/";
+    char const* const fedora_path2= "/usr/share/fonts/liberation-sans/";
     char const* const arch_path   = "/usr/share/fonts/TTF/";
 
-    for (auto const path : { debian_path, fedora_path, arch_path })
+    char const* const default_files[] = { "FreeSansBold.ttf", "LiberationSans-Bold.ttf" };
+
+    for (auto const default_file : default_files)
     {
-        auto const full_path = std::string{path} + default_file;
-        if (access(full_path.c_str(), R_OK) == 0)
-            result = full_path;
+        for (auto const path : { debian_path, fedora_path, fedora_path2, arch_path })
+        {
+            auto const full_path = std::string{path} + default_file;
+            if (access(full_path.c_str(), R_OK) == 0)
+            {
+                result = full_path;
+                return result.c_str();
+            }
+        }
     }
 
     return result.c_str();

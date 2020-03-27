@@ -35,25 +35,6 @@
 
 using namespace miral;
 
-namespace
-{
-// Neither xdg-terminal nor x-terminal-emulator is guaranteed to exist,
-// and neither is a good way to identify user preference...
-std::string const terminal_cmd = []() -> std::string
-    {
-        auto const user_bin = "/usr/bin/";
-
-        for (std::string name : { "weston-terminal", "gnome-terminal", "konsole",
-                                  "qterminal", "lxterminal", "xdg-terminal"})
-        {
-            if (boost::filesystem::exists(user_bin + name))
-                return name;
-        }
-
-        return "x-terminal-emulator";
-    }();
-}
-
 int main(int argc, char const* argv[])
 {
     MirRunner runner{argc, argv};
@@ -62,6 +43,8 @@ int main(int argc, char const* argv[])
 
     ExternalClientLauncher external_client_launcher;
     egmde::Launcher launcher{external_client_launcher};
+
+    auto const terminal_cmd = std::string{argv[0]} + "-terminal";
 
     auto const keyboard_shortcuts = [&](MirEvent const* event)
         {

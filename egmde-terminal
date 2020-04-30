@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -x
+
 for terminal in gnome-terminal.real gnome-terminal weston-terminal qterminal lxterminal x-terminal-emulator xdg-terminal
 do
   if which $terminal > /dev/null 2>&1
@@ -23,7 +25,7 @@ then
   $terminal "$@"&
 else
   # What we do is launch the gnome-terminal-server with a distinct --app-id and,
-  # in the next few seconds, launch gnome-terminal with the same --app-id.
+  # after waiting for it to start, launch gnome-terminal with the same --app-id.
   #
   # On Ubuntu 16.04 and 18.04 gnome-terminal-server is in /usr/lib/gnome-terminal
   # On Fedora and Ubuntu 20.04 gnome-terminal-server is in /usr/libexec/
@@ -32,7 +34,21 @@ else
   do
     if [ -x "$terminal_server" ];  then break; fi
   done
-  $terminal_server --app-id io.mirserver.egmdeTerminal&
-  sleep 0.1
+
+  if ! gdbus introspect --session --dest io.mirserver.egmdeTerminal --object-path /io/mirserver/Terminal > /dev/null 2>&1
+  then
+     $terminal_server --app-id io.mirserver.egmdeTerminal&
+
+    if (gdbus help | grep wait > /dev/null)
+    then
+      gdbus wait       --session io.mirserver.egmdeTerminal
+    else
+      while ! gdbus introspect --session --dest io.mirserver.egmdeTerminal --object-path /io/mirserver/Terminal > /dev/null 2>&1
+      do
+        sleep 0.2
+      done
+    fi
+  fi
+
   $terminal --app-id io.mirserver.egmdeTerminal
 fi

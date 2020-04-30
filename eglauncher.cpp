@@ -513,9 +513,6 @@ void egmde::Launcher::Self::run_app(Mode mode)
 
 void egmde::Launcher::Self::run_app(std::string app, Mode mode) const
 {
-    setenv("NO_AT_BRIDGE", "1", 1);
-    unsetenv("DISPLAY");
-
     auto ws = app.find('%');
     if (ws != std::string::npos)
     {
@@ -526,19 +523,12 @@ void egmde::Launcher::Self::run_app(std::string app, Mode mode) const
         app = app.substr(0, ws);    // For now ignore the rest of the Exec value
     }
 
-    if (app == "qterminal --drop")
-        app = "qterminal";
-
-    if (app == "gnome-terminal" && boost::filesystem::exists("/usr/bin/gnome-terminal.real"))
-        app = "gnome-terminal --disable-factory";
-
-    static char const* launch_prefix = getenv("EGMDE_LAUNCH_PREFIX");
-
     std::vector<std::string> command;
 
     char const* start = nullptr;
     char const* end = nullptr;
 
+    static char const* launch_prefix = getenv("EGMDE_LAUNCH_PREFIX");
     if (launch_prefix)
     {
         for (start = launch_prefix; (end = strchr(start, ' ')); start = end+1)
@@ -634,7 +624,6 @@ void egmde::Launcher::Self::run_app(std::string app, Mode mode) const
         break;
     }
 
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 9, 0)
     switch (mode)
     {
     case Mode::wayland:
@@ -647,9 +636,6 @@ void egmde::Launcher::Self::run_app(std::string app, Mode mode) const
         external_client_launcher.launch_using_x11(command);
         break;
     }
-#else
-    external_client_launcher.launch(command);
-#endif
 }
 
 void egmde::Launcher::Self::next_app()
@@ -754,9 +740,7 @@ void egmde::Launcher::Self::show_screen(SurfaceInfo& info) const
     printer.print(width, height, content_area, current_app->title);
     auto const help =
         "<Enter> = start app | "
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 9, 0)
-        "<BkSp> = start X11 app | "
-#endif
+        "<BkSp> = start using X11 | "
         "Arrows (or initial letter) = change app | <Esc> = cancel";
 
     printer.footer(width, height, content_area, {help, ""});

@@ -198,10 +198,8 @@ auto load_details() -> std::vector<app_details>
         if (sp != std::string::npos)
             app.erase(sp, app.size());
 
-        auto title = name + " [" + app + ']';
-
         if (!name.empty() && !exec.empty())
-            details.push_back(app_details{name, exec, icon, title});
+            details.push_back(app_details{name, exec, icon, name});
     }
 
     std::sort(begin(details), end(details),
@@ -216,8 +214,15 @@ auto load_details() -> std::vector<app_details>
 
     std::string::size_type max_length = 0;
 
-    for (auto const& detail : details)
+    static auto const title_size_limit = 30;
+    for (auto& detail : details)
+    {
+        if (detail.title.size() > title_size_limit)
+        {
+            detail.title = detail.title.substr(0, title_size_limit-3) + "...";
+        }
         max_length = std::max(max_length, detail.title.size());
+    }
 
     for (auto& detail : details)
     {
@@ -736,13 +741,15 @@ void egmde::Launcher::Self::show_screen(SurfaceInfo& info) const
 
     // One day we'll use the icon file
 
+    auto const prev = (current_app == apps.begin() ? apps.end() : current_app) - 1;
+    auto const next = current_app == apps.end()-1 ? apps.begin() : current_app + 1;
+
     static Printer printer;
-    printer.print(width, height, content_area, current_app->title);
+    printer.print(width, height, content_area, {prev->title,  current_app->title, next->title});
     auto const help =
         "<Enter> = start app | "
         "<BkSp> = start using X11 | "
         "Arrows (or initial letter) = change app | <Esc> = cancel";
-
     printer.footer(width, height, content_area, {help, ""});
 
     wl_surface_attach(info.surface, info.buffer, 0, 0);

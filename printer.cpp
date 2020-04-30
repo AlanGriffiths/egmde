@@ -74,58 +74,70 @@ egmde::Printer::~Printer()
     FT_Done_FreeType(lib);
 }
 
-void egmde::Printer::print(int32_t width, int32_t height, char unsigned* region_address, std::string const& title_)
+void egmde::Printer::print(int32_t width, int32_t height, char unsigned* region_address, std::initializer_list<std::string> const& lines)
 {
+    std::string::size_type title_chars = 0;
+
+    for (auto const& title : lines)
+        title_chars = std::max(title.size(), title_chars);
+
     auto const stride = 4*width;
-    auto const title = converter.from_bytes(title_);
-    auto const fwidth = width / title.size();
+    auto const fwidth = width / title_chars;
+    auto const title_count = lines.size();
 
     FT_Set_Pixel_Sizes(face, fwidth, 0);
 
-    int title_width = 0;
-    unsigned int title_height = 0;
+    int title_row = 0;
 
-    for (auto const& ch : title)
+    for (auto const& title_ : lines)
     {
-        FT_Load_Glyph(face, FT_Get_Char_Index(face, ch), FT_LOAD_DEFAULT);
-        auto const glyph = face->glyph;
-        FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL);
+        auto const title = converter.from_bytes(title_.c_str());
 
-        title_width += glyph->advance.x >> 6;
-        title_height = std::max(title_height, glyph->bitmap.rows);
-    }
+        int title_width = 0;
+        unsigned int title_height = 0;
 
-    int base_x = (width - title_width)/2;
-    int base_y = title_height + (height- title_height)/2;
-
-    for (auto const& ch : title)
-    {
-        FT_Load_Glyph(face, FT_Get_Char_Index(face, ch), FT_LOAD_DEFAULT);
-        auto const glyph = face->glyph;
-        FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL);
-
-        auto const& bitmap = glyph->bitmap;
-        auto const x = base_x + glyph->bitmap_left;
-
-        if (static_cast<int>(x + bitmap.width) <= width)
+        for (auto const& ch : title)
         {
-            unsigned char* src = bitmap.buffer;
+            FT_Load_Glyph(face, FT_Get_Char_Index(face, ch), FT_LOAD_DEFAULT);
+            auto const glyph = face->glyph;
+            FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL);
 
-            auto const y = base_y - glyph->bitmap_top;
-            auto* dest = region_address + y*stride + 4*x;
-
-            for (auto row = 0u; row != bitmap.rows; ++row)
-            {
-                for (auto col = 0u; col != 4*bitmap.width; ++col)
-                    dest[col] |= src[col/4];
-
-                src += bitmap.pitch;
-                dest += stride;
-            }
+            title_width += glyph->advance.x >> 6;
+            title_height = std::max(title_height, glyph->bitmap.rows);
         }
 
-        base_x += glyph->advance.x >> 6;
-        base_y += glyph->advance.y >> 6;
+        int base_x = (width - title_width)/2;
+        int base_y = ((++title_row)*height)/(title_count+1) + title_height/2;
+
+        for (auto const& ch : title)
+        {
+            FT_Load_Glyph(face, FT_Get_Char_Index(face, ch), FT_LOAD_DEFAULT);
+            auto const glyph = face->glyph;
+            FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL);
+
+            auto const& bitmap = glyph->bitmap;
+            auto const x = base_x + glyph->bitmap_left;
+
+            if (static_cast<int>(x + bitmap.width) <= width)
+            {
+                unsigned char* src = bitmap.buffer;
+
+                auto const y = base_y - glyph->bitmap_top;
+                auto* dest = region_address + y*stride + 4*x;
+
+                for (auto row = 0u; row != bitmap.rows; ++row)
+                {
+                    for (auto col = 0u; col != 4*bitmap.width; ++col)
+                        dest[col] |= (title_row ==2) ? src[col/4] : src[col/4]/2;
+
+                    src += bitmap.pitch;
+                    dest += stride;
+                }
+            }
+
+            base_x += glyph->advance.x >> 6;
+            base_y += glyph->advance.y >> 6;
+        }
     }
 }
 

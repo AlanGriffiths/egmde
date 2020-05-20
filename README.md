@@ -20,4 +20,4 @@ You can try egmde as your desktop, or as a window on your desktop. But remember,
 
 [![egmde](https://snapcraft.io/egmde/badge.svg)](https://snapcraft.io/egmde)
 
-[![confined-shell](https://snapcraft.io/confined-shell/badge.svg)](https://snapcraft.io/confined-shell)
+[![egmde-confined-desktop](https://snapcraft.io/egmde-confined-desktop/badge.svg)](https://snapcraft.io/egmde-confined-desktop)

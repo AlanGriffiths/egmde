@@ -34,7 +34,7 @@ struct Printer
     Printer(Printer const&) = delete;
     Printer& operator=(Printer const&) = delete;
 
-    void print(int32_t width, int32_t height, char unsigned* region_address, std::string const& title);
+    void print(int32_t width, int32_t height, char unsigned* region_address, std::initializer_list<std::string> const& lines);
     void footer(int32_t width, int32_t height, char unsigned* region_address, std::initializer_list<char const*> const& lines);
 
 private:

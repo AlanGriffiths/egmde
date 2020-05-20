@@ -1,9 +1,8 @@
-#! /bin/bash
+#! /bin/sh
 set -e
 
-socket=${XDG_RUNTIME_DIR}/egmde_socket
-wayland_display=egmde_wayland
 bindir=$(dirname $0)
+if [ "${bindir}" != "" ]; then bindir="${bindir}/"; fi
 
 while [ $# -gt 0 ]
 do
@@ -17,16 +16,21 @@ do
   shift
 done
 
-if [ "${bindir}" != "" ]; then bindir="${bindir}/"; fi
+if [ ! -d "${XDG_RUNTIME_DIR}" ]
+then
+  echo "Error: XDG_RUNTIME_DIR '${XDG_RUNTIME_DIR}' does not exists"
+  exit 1
+fi
 
-if [ -e "${socket}" ]; then echo "Error: session endpoint '${socket}' already exists"; exit 1 ;fi
-if [ -e "${XDG_RUNTIME_DIR}/${wayland_display}" ]; then echo "Error: wayland endpoint '${wayland_display}' already exists"; exit 1 ;fi
-if [ ! -d "${XDG_RUNTIME_DIR}" ]; then echo "Error: XDG_RUNTIME_DIR '${XDG_RUNTIME_DIR}' does not exists"; exit 1 ;fi
+if [ ! -z "${WAYLAND_DISPLAY}" ] && [ -e "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" ]
+then
+  echo "Error: wayland endpoint '${WAYLAND_DISPLAY}' already exists"
+  exit 1
+fi
 
 keymap_index=$(gsettings get org.gnome.desktop.input-sources current | cut -d\  -f 2)
 keymap=$(gsettings get org.gnome.desktop.input-sources sources | grep -Po "'[[:alpha:]]+'\)" | sed -ne "s/['|)]//g;$(($keymap_index+1))p")
 
-export MIR_SERVER_WAYLAND_SOCKET_NAME=${wayland_display}
-export MIR_SERVER_FILE=${socket}
 export MIR_SERVER_KEYMAP=${keymap}
+export MIR_SERVER_ENABLE_X11=1
 exec ${bindir}egmde "$@"

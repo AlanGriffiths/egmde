@@ -108,6 +108,7 @@ void egmde::open_desktop_entry(std::string const& desktop_file, std::vector<std:
     if (error)
     {
         puts(error->message);
+        printf("dest=%s, object_path=%s, interface_name=%s, method_name=%s, id=%s\n", dest, object_path, interface_name, method_name, id.c_str());
         g_error_free(error);
     }
 

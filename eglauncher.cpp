@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2019 Octopull Limited.
+ * Copyright © 2016-2020 Octopull Limited.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -21,8 +21,6 @@
 #include "printer.h"
 
 #include "open_desktop_entry.h"
-
-#include <miral/version.h>
 
 #include <linux/input.h>
 #include <xkbcommon/xkbcommon.h>
@@ -63,6 +61,23 @@ auto ends_with_desktop(std::string const &full_string) -> bool
     return !full_string.compare(full_string.length() - desktop.length(), desktop.length(), desktop);
 }
 
+void scan_directory_for_desktop_files(file_list& list, boost::filesystem::path const& path)
+try
+{
+    for (boost::filesystem::directory_iterator i(path), end; i != end; ++i)
+    {
+        if (is_directory(*i))
+        {
+            scan_directory_for_desktop_files(list, *i);
+        }
+        else if (ends_with_desktop(i->path().filename().string()))
+        {
+            list.push_back(i->path());
+        }
+    }
+}
+catch (std::exception const&){}
+
 auto scan_for_desktop_files(std::vector<boost::filesystem::path> const& paths) -> file_list
 {
     file_list list;
@@ -70,17 +85,9 @@ auto scan_for_desktop_files(std::vector<boost::filesystem::path> const& paths) -
     for (auto const& path : paths)
     {
         if (is_directory(path))
-        try
         {
-            for (boost::filesystem::directory_iterator i(path), end; i != end; ++i)
-            {
-                if (!is_directory(*i) && ends_with_desktop(i->path().filename().string()))
-                {
-                    list.push_back(i->path());
-                }
-            }
+            scan_directory_for_desktop_files(list, path);
         }
-        catch (std::exception const&){}
     }
 
     return list;
@@ -115,6 +122,20 @@ struct app_details
     std::string desktop_file;
 };
 
+auto unescape(std::string const& in) -> std::string
+{
+    std::string result;
+    bool escape = false;
+
+    for (auto c : in)
+    {
+        if (!(escape = (!escape && c == '\\')))
+            result += c;
+    }
+
+    return result;
+}
+
 auto load_details() -> std::vector<app_details>
 {
     static std::string const categories_key{"Categories="};
@@ -137,16 +158,29 @@ auto load_details() -> std::vector<app_details>
         std::string exec;
         std::string icon;
 
+        auto in_desktop_entry = false;
+
         while (std::getline(in, line))
         {
-            if (line.find(categories_key) == 0)
-                categories = line.substr(categories_key.length()) + ";";
-            else if (line.find(name_key) == 0 && name.empty())
-                name = line.substr(name_key.length());
-            else if (line.find(exec_key) == 0)
-                exec = line.substr(exec_key.length());
-            else if (line.find(icon_key) == 0)
-                icon = line.substr(icon_key.length());
+            if (line == "[Desktop Entry]")
+            {
+                in_desktop_entry = true;
+            }
+            else if (line.find("[Desktop Action") == 0)
+            {
+                in_desktop_entry = false;
+            }
+            else if (in_desktop_entry)
+            {
+                if (line.find(categories_key) == 0)
+                    categories = line.substr(categories_key.length()) + ";";
+                else if (line.find(name_key) == 0 && name.empty())
+                    name = line.substr(name_key.length());
+                else if (line.find(exec_key) == 0)
+                    exec = unescape(line.substr(exec_key.length()));
+                else if (line.find(icon_key) == 0)
+                    icon = line.substr(icon_key.length());
+            }
         }
 
         auto app = exec;
@@ -166,10 +200,8 @@ auto load_details() -> std::vector<app_details>
         if (sp != std::string::npos)
             app.erase(sp, app.size());
 
-        auto title = name + " [" + app + ']';
-
         if (!name.empty() && !exec.empty())
-            details.push_back(app_details{name, exec, icon, title, desktop.string()});
+            details.push_back(app_details{name, exec, icon, name, desktop.string()});
     }
 
     std::sort(begin(details), end(details),
@@ -184,8 +216,15 @@ auto load_details() -> std::vector<app_details>
 
     std::string::size_type max_length = 0;
 
-    for (auto const& detail : details)
+    static auto const title_size_limit = 30;
+    for (auto& detail : details)
+    {
+        if (detail.title.size() > title_size_limit)
+        {
+            detail.title = detail.title.substr(0, title_size_limit-3) + "...";
+        }
         max_length = std::max(max_length, detail.title.size());
+    }
 
     for (auto& detail : details)
     {
@@ -199,11 +238,30 @@ auto load_details() -> std::vector<app_details>
 
 auto list_desktop_files() -> file_list
 {
-    std::string search_path{"~/.local/share/applications:/usr/share/applications:/var/lib/snapd/desktop/applications"};
-    if (char const* desktop_path = getenv("EGMDE_DESKTOP_PATH"))
-        search_path = desktop_path;
-    // search_paths relies on a ":" sentinal value
-    search_path +=  ":";
+    std::string search_path;
+    if (auto const* start = getenv("XDG_DATA_DIRS"))
+    {
+        for (auto const* end = start;
+            *end && ((end = strchr(start, ':')) || (end = strchr(start, '\0')));
+            start = end+1)
+        {
+            if (start == end) continue;
+
+            if (strncmp(start, "~/", 2) != 0)
+            {
+                search_path += std::string{start, end} + "/applications:";
+            }
+            else if (auto const home = getenv("HOME"))
+            {
+                search_path += home + std::string{start + 1, end} + "/applications:";
+            }
+        }
+    }
+    else
+    {
+        search_path = "/usr/local/share/applications:/usr/share/applications:/var/lib/snapd/desktop/applications:";
+    }
+
     auto const paths = search_paths(search_path.c_str());
     return scan_for_desktop_files(paths);
 
@@ -220,10 +278,11 @@ struct egmde::Launcher::Self : egmde::FullscreenClient
 
     void start();
 
+    void run_app(std::string app, Mode mode) const;
 private:
     void prev_app();
     void next_app();
-    void run_app();
+    void run_app(Mode mode = Mode::wayland);
 
     void keyboard_key(wl_keyboard* keyboard, uint32_t serial, uint32_t time, uint32_t key, uint32_t state) override;
     void keyboard_leave(wl_keyboard* keyboard, uint32_t serial, wl_surface* surface) override;
@@ -286,6 +345,14 @@ void egmde::Launcher::operator()(wl_display* display)
     std::lock_guard<decltype(mutex)> lock{mutex};
 }
 
+void egmde::Launcher::run_app(std::string app, Mode mode) const
+{
+    if (auto ss = self.lock())
+    {
+        ss->run_app(app, mode);
+    }
+}
+
 void egmde::Launcher::Self::start()
 {
     if (!running.exchange(true))
@@ -299,7 +366,7 @@ void egmde::Launcher::Self::start()
             current_app = new_terminal;
 
         showing = nullptr;
-        for_each_surface([this](auto& info) { draw_screen(info);});
+        for_each_surface([this](auto& info) { this->draw_screen(info);});
     }
 }
 
@@ -324,9 +391,21 @@ void egmde::Launcher::Self::keyboard_key(wl_keyboard* /*keyboard*/, uint32_t /*s
             run_app();
             break;
 
+        case XKB_KEY_BackSpace:
+            run_app(Mode::x11);
+            break;
+
+        case XKB_KEY_F11:
+            run_app(Mode::wayland_debug);
+            break;
+
+        case XKB_KEY_F12:
+            run_app(Mode::x11_debug);
+            break;
+
         case XKB_KEY_Escape:
             running = false;
-            for_each_surface([this](auto& info) { draw_screen(info); });
+            for_each_surface([this](auto& info) { this->draw_screen(info); });
             break;
 
         default:
@@ -352,7 +431,7 @@ void egmde::Launcher::Self::keyboard_key(wl_keyboard* /*keyboard*/, uint32_t /*s
                 if (p != apps.end())
                 {
                     current_app = p;
-                    for_each_surface([this](auto& info) { draw_screen(info); });
+                    for_each_surface([this](auto& info) { this->draw_screen(info); });
                 }
             }
         }
@@ -430,14 +509,20 @@ void egmde::Launcher::Self::touch_down(
     FullscreenClient::touch_down(touch, serial, time, surface, id, x, y);
 }
 
-void egmde::Launcher::Self::run_app()
+void egmde::Launcher::Self::run_app(Mode mode)
+{
+    auto app = current_app->exec;
+
+    run_app(app, mode);
+
+    running = false;
+    for_each_surface([this](auto& info) { this->draw_screen(info); });
+}
+
+void egmde::Launcher::Self::run_app(std::string app, Mode mode) const
 {
     if (getenv("EGMDE_SNAPCRAFT_LAUNCH") == nullptr)
     {
-        setenv("NO_AT_BRIDGE", "1", 1);
-        unsetenv("DISPLAY");
-
-        auto app = current_app->exec;
         auto ws = app.find('%');
         if (ws != std::string::npos)
         {
@@ -448,19 +533,12 @@ void egmde::Launcher::Self::run_app()
             app = app.substr(0, ws);    // For now ignore the rest of the Exec value
         }
 
-        if (app == "qterminal --drop")
-            app = "qterminal";
-
-        if (app == "gnome-terminal" && boost::filesystem::exists("/usr/bin/gnome-terminal.real"))
-            app = "gnome-terminal --disable-factory";
-
-        static char const* launch_prefix = getenv("EGMDE_LAUNCH_PREFIX");
-
         std::vector<std::string> command;
 
         char const* start = nullptr;
         char const* end = nullptr;
 
+        static char const* launch_prefix = getenv("EGMDE_LAUNCH_PREFIX");
         if (launch_prefix)
         {
             for (start = launch_prefix; (end = strchr(start, ' ')); start = end+1)
@@ -472,14 +550,102 @@ void egmde::Launcher::Self::run_app()
             command.emplace_back(start);
         }
 
-        for (start = app.c_str(); (end = strchr(start, ' ')); start = end+1)
+        switch (mode)
         {
-            if (start != end)
-                command.emplace_back(start, end);
+        case Mode::wayland_debug:
+        case Mode::x11_debug:
+            command.emplace_back("gnome-terminal");
+            if (boost::filesystem::exists("/usr/bin/gnome-terminal.real"))
+                command.emplace_back("--disable-factory");
+            command.emplace_back("--");
+            command.emplace_back("bash");
+            command.emplace_back("-c");
+            command.emplace_back(app + ";read -p \"Press any key to continue... \" -n1 -s");
+            break;
+
+        case Mode::wayland:
+        case Mode::x11:
+            {
+                std::string token;
+                char in_quote = '\0';
+                bool escaping = false;
+
+                auto push_token = [&]()
+                    {
+                        if (!token.empty())
+                        {
+                            command.push_back(std::move(token));
+                            token.clear();
+                        }
+                    };
+
+                for (auto c : app)
+                {
+                    if (escaping)
+                    {
+                        // end escape
+                        escaping = false;
+                        token += c;
+                        continue;
+                    }
+
+                    switch (c)
+                    {
+                    case '\\':
+                        // start escape
+                        escaping = true;
+                        continue;
+
+                    case '\'':
+                    case '\"':
+                        if (in_quote == '\0')
+                        {
+                            // start quoted sequence
+                            in_quote = c;
+                            continue;
+                        }
+                        else if (c == in_quote)
+                        {
+                            // end quoted sequence
+                            in_quote = '\0';
+                            continue;
+                        }
+                        else
+                        {
+                            break;
+                        }
+
+                    default:
+                        break;
+                    }
+
+                    if (!isspace(c) || in_quote)
+                    {
+                        token += c;
+                    }
+                    else
+                    {
+                        push_token();
+                    }
+                }
+
+                push_token();
+            }
+            break;
         }
 
-        command.emplace_back(start);
-        external_client_launcher.launch(command);
+        switch (mode)
+        {
+        case Mode::wayland:
+        case Mode::wayland_debug:
+            external_client_launcher.launch(command);
+            break;
+
+        case Mode::x11:
+        case Mode::x11_debug:
+            external_client_launcher.launch_using_x11(command);
+            break;
+        }
     }
     else
     {
@@ -487,7 +653,6 @@ void egmde::Launcher::Self::run_app()
             "XDG_SESSION_DESKTOP=mir",
             "XDG_SESSION_TYPE=wayland"};
 
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(2, 8, 0)
         if (auto const& wayland_display = runner.wayland_display())
         {
             env.push_back("WAYLAND_DISPLAY=" + wayland_display.value());
@@ -497,16 +662,9 @@ void egmde::Launcher::Self::run_app()
         {
             env.push_back("DISPLAY=" + x11_display.value());
         }
-#else
-        // In egmde there's no way to get the correct WAYLAND_DISPLAY value,
-        // but hard-coding it here allows the interface to be tried out
-        env.push_back("WAYLAND_DISPLAY=wayland-0");
-#endif
+
         open_desktop_entry(current_app->desktop_file, env);
     }
-
-    running = false;
-    for_each_surface([this](auto& info) { draw_screen(info); });
 }
 
 void egmde::Launcher::Self::next_app()
@@ -514,7 +672,7 @@ void egmde::Launcher::Self::next_app()
     if (++current_app == apps.end())
         current_app = apps.begin();
 
-    for_each_surface([this](auto& info) { draw_screen(info); });
+    for_each_surface([this](auto& info) { this->draw_screen(info); });
 }
 
 void egmde::Launcher::Self::prev_app()
@@ -524,7 +682,7 @@ void egmde::Launcher::Self::prev_app()
 
     --current_app;
 
-    for_each_surface([this](auto& info) { draw_screen(info); });
+    for_each_surface([this](auto& info) { this->draw_screen(info); });
 }
 
 egmde::Launcher::Self::Self(wl_display* display, ExternalClientLauncher& external_client_launcher, MirRunner const& runner) :
@@ -608,11 +766,16 @@ void egmde::Launcher::Self::show_screen(SurfaceInfo& info) const
 
     // One day we'll use the icon file
 
+    auto const prev = (current_app == apps.begin() ? apps.end() : current_app) - 1;
+    auto const next = current_app == apps.end()-1 ? apps.begin() : current_app + 1;
+
     static Printer printer;
-    printer.print(width, height, content_area, current_app->title);
-    printer.footer(
-        width, height, content_area,
-        {"<Enter> = start app | Arrow keys = change app | initial letter = change app | <Esc> = cancel", ""});
+    printer.print(width, height, content_area, {prev->title,  current_app->title, next->title});
+    auto const help =
+        "<Enter> = start app | "
+        "<BkSp> = start using X11 | "
+        "Arrows (or initial letter) = change app | <Esc> = cancel";
+    printer.footer(width, height, content_area, {help, ""});
 
     wl_surface_attach(info.surface, info.buffer, 0, 0);
     wl_surface_commit(info.surface);
@@ -626,5 +789,5 @@ void egmde::Launcher::Self::clear_screen(SurfaceInfo& info) const
 void egmde::Launcher::Self::keyboard_leave(wl_keyboard* /*keyboard*/, uint32_t /*serial*/, wl_surface* /*surface*/)
 {
     running = false;
-    for_each_surface([this](auto& info) { draw_screen(info); });
+    for_each_surface([this](auto& info) { this->draw_screen(info); });
 }

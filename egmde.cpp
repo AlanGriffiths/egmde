@@ -27,12 +27,18 @@
 #include <miral/keymap.h>
 #include <miral/runner.h>
 #include <miral/set_window_management_policy.h>
+#include <miral/version.h>
 #include <miral/wayland_extensions.h>
-
 #include <miral/x11_support.h>
-#include <miral/display_configuration.h>
 
+#include <boost/filesystem.hpp>
 #include <linux/input.h>
+
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(3, 0, 0)
+#include <miral/toolkit_event.h>
+
+using namespace miral::toolkit;
+#endif
 
 using namespace miral;
 
@@ -44,6 +50,8 @@ int main(int argc, char const* argv[])
 
     ExternalClientLauncher external_client_launcher;
     egmde::Launcher launcher{external_client_launcher, runner};
+
+    auto const terminal_cmd = std::string{argv[0]} + "-terminal";
 
     auto const keyboard_shortcuts = [&](MirEvent const* event)
         {
@@ -69,6 +77,12 @@ int main(int argc, char const* argv[])
 
             case KEY_BACKSPACE:
                 runner.stop();
+                return true;
+
+            case KEY_T: launcher.run_app(terminal_cmd, egmde::Launcher::Mode::wayland);
+                return true;
+
+            case KEY_X: launcher.run_app(terminal_cmd, egmde::Launcher::Mode::x11);
                 return true;
 
             default:
@@ -116,7 +130,7 @@ int main(int argc, char const* argv[])
         {
             X11Support{},
             WaylandExtensions{},
-            DisplayConfiguration{runner},
+            display_configuration_options,
             CommandLineOption{[&](auto& option) { wallpaper.top(option);},
                               "wallpaper-top",    "Colour of wallpaper RGB", "0x000000"},
             CommandLineOption{[&](auto& option) { wallpaper.bottom(option);},

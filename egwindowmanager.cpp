@@ -28,44 +28,6 @@
 using namespace mir::geometry;
 
 
-void egmde::WindowManagerPolicy::keep_size_within_limits(
-    WindowInfo const& window_info, Displacement& delta, Width& new_width, Height& new_height) const
-{
-    auto const min_width  = std::max(window_info.min_width(), Width{5});
-    auto const min_height = std::max(window_info.min_height(), Height{5});
-
-    if (new_width < min_width)
-    {
-        new_width = min_width;
-        if (delta.dx > DeltaX{0})
-            delta.dx = DeltaX{0};
-    }
-
-    if (new_height < min_height)
-    {
-        new_height = min_height;
-        if (delta.dy > DeltaY{0})
-            delta.dy = DeltaY{0};
-    }
-
-    auto const max_width  = window_info.max_width();
-    auto const max_height = window_info.max_height();
-
-    if (new_width > max_width)
-    {
-        new_width = max_width;
-        if (delta.dx < DeltaX{0})
-            delta.dx = DeltaX{0};
-    }
-
-    if (new_height > max_height)
-    {
-        new_height = max_height;
-        if (delta.dy < DeltaY{0})
-            delta.dy = DeltaY{0};
-    }
-}
-
 egmde::WindowManagerPolicy::WindowManagerPolicy(WindowManagerTools const& tools, Wallpaper const& wallpaper) :
     MinimalWindowManager{tools},
     wallpaper{&wallpaper}

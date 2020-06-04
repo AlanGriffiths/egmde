@@ -38,8 +38,6 @@ public:
 private:
     Wallpaper const* wallpaper;
 
-    void keep_size_within_limits(
-        WindowInfo const& window_info, Displacement& delta, Width& new_width, Height& new_height) const;
 };
 }
 

@@ -72,37 +72,40 @@ auto egmde::ShellCommands::keyboard_shortcuts(MirKeyboardEvent const* kev) -> bo
 
     switch (mir_keyboard_event_scan_code(kev))
     {
-        case KEY_A:launcher.show();
-            if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
-                return false;
-            return true;
-
-        case KEY_BACKSPACE:
-            if (mir_keyboard_event_action(kev) == mir_keyboard_action_down)
-            {
-                std::lock_guard<decltype(mutex)> lock{mutex};
-                if (app_windows > 0)
-                {
-                    return false;
-                }
-            }
-            runner.stop();
-            return true;
-
-        case KEY_T:
-            if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
-                return false;
-            launcher.run_app(terminal_cmd, egmde::Launcher::Mode::wayland);
-            return true;
-
-        case KEY_X:
-            if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
-                return false;
-            launcher.run_app(terminal_cmd, egmde::Launcher::Mode::x11);
-            return true;
-
-        default:
+    case KEY_A:
+        if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
             return false;
+
+        add_shell_app(launcher.session());
+        launcher.show();
+        return true;
+
+    case KEY_BACKSPACE:
+        if (mir_keyboard_event_action(kev) == mir_keyboard_action_down)
+        {
+            std::lock_guard<decltype(mutex)> lock{mutex};
+            if (app_windows > 0)
+            {
+                return false;
+            }
+        }
+        runner.stop();
+        return true;
+
+    case KEY_T:
+        if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
+            return false;
+        launcher.run_app(terminal_cmd, egmde::Launcher::Mode::wayland);
+        return true;
+
+    case KEY_X:
+        if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
+            return false;
+        launcher.run_app(terminal_cmd, egmde::Launcher::Mode::x11);
+        return true;
+
+    default:
+        return false;
     }
 }
 

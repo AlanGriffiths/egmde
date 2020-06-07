@@ -26,6 +26,7 @@
 
 #include <linux/input.h>
 #include <unistd.h>
+#include <signal.h>
 
 using namespace mir::geometry;
 
@@ -71,4 +72,53 @@ void egmde::WindowManagerPolicy::advise_delete_app(miral::ApplicationInfo const&
     WindowManagementPolicy::advise_delete_app(application);
 
     commands->del_shell_app(application.application());
+}
+
+bool egmde::WindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* kev)
+{
+    if (MinimalWindowManager::handle_keyboard_event(kev))
+        return true;
+
+    if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
+        return false;
+
+    auto const mods = mir_keyboard_event_modifiers(kev);
+
+    if (!(mods & mir_input_event_modifier_alt) || !(mods & mir_input_event_modifier_ctrl))
+        return false;
+
+    if (auto active_window = tools.active_window())
+    {
+        auto active_output = tools.active_output();
+        auto& window_info = tools.info_for(active_window);
+        WindowSpecification modifications;
+
+        switch (mir_keyboard_event_scan_code(kev))
+        {
+        case KEY_LEFT:
+            modifications.state() = mir_window_state_vertmaximized;
+            tools.place_and_size_for_state(modifications, window_info);
+            modifications.top_left() = active_output.top_left;
+            tools.modify_window(window_info, modifications);
+            return true;
+
+        case KEY_RIGHT:
+            modifications.state() = mir_window_state_vertmaximized;
+            tools.place_and_size_for_state(modifications, window_info);
+
+            if (modifications.size().is_set())
+            {
+                modifications.top_left() = active_output.top_right() - as_delta(modifications.size().value().width);
+            }
+            else
+            {
+                modifications.top_left() = active_output.top_right() - as_delta(active_window.size().width);
+            }
+
+            tools.modify_window(window_info, modifications);
+            return true;
+        }
+    }
+
+    return false;
 }

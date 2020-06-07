@@ -42,6 +42,8 @@ public:
 
     void advise_delete_window(const WindowInfo &window_info) override;
 
+    bool handle_keyboard_event(MirKeyboardEvent const* event) override;
+
 private:
     Wallpaper const* const wallpaper;
     ShellCommands* const commands;

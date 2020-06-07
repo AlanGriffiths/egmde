@@ -21,7 +21,9 @@ add_executable(egmde
     egwindowmanager.cpp egwindowmanager.h
     egworker.cpp egworker.h
     printer.cpp printer.h
-        egfullscreenclient.cpp egfullscreenclient.h)
+    egfullscreenclient.cpp egfullscreenclient.h
+    egshellcommands.cpp egshellcommands.h
+)
 
 execute_process(
     COMMAND grep ^NAME= /etc/os-release 

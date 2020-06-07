@@ -18,6 +18,7 @@
 
 #include "egwallpaper.h"
 #include "egwindowmanager.h"
+#include "egshellcommands.h"
 #include "eglauncher.h"
 
 #include <miral/append_event_filter.h>
@@ -53,75 +54,7 @@ int main(int argc, char const* argv[])
 
     auto const terminal_cmd = std::string{argv[0]} + "-terminal";
 
-    auto const keyboard_shortcuts = [&](MirEvent const* event)
-        {
-            if (mir_event_get_type(event) != mir_event_type_input)
-                return false;
-
-            MirInputEvent const* input_event = mir_event_get_input_event(event);
-            if (mir_input_event_get_type(input_event) != mir_input_event_type_key)
-                return false;
-
-            MirKeyboardEvent const* kev = mir_input_event_get_keyboard_event(input_event);
-            if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
-                return false;
-
-            MirInputEventModifiers mods = mir_keyboard_event_modifiers(kev);
-            if (!(mods & mir_input_event_modifier_alt) || !(mods & mir_input_event_modifier_ctrl))
-                return false;
-
-            switch (mir_keyboard_event_scan_code(kev))
-            {
-            case KEY_A:launcher.show();
-                return true;
-
-            case KEY_BACKSPACE:
-                runner.stop();
-                return true;
-
-            case KEY_T: launcher.run_app(terminal_cmd, egmde::Launcher::Mode::wayland);
-                return true;
-
-            case KEY_X: launcher.run_app(terminal_cmd, egmde::Launcher::Mode::x11);
-                return true;
-
-            default:
-                return false;
-            }
-        };
-
-    auto touch_shortcuts = [&, gesture = false](MirEvent const* event) mutable
-        {
-            if (mir_event_get_type(event) != mir_event_type_input)
-                return false;
-
-            auto const* input_event = mir_event_get_input_event(event);
-            if (mir_input_event_get_type(input_event) != mir_input_event_type_touch)
-                return false;
-
-            auto const* tev = mir_input_event_get_touch_event(input_event);
-
-            if (gesture)
-            {
-                if (mir_touch_event_action(tev, 0) == mir_touch_action_up)
-                    gesture = false;
-                return true;
-            }
-
-            if (mir_touch_event_point_count(tev) != 1)
-                return false;
-
-            if (mir_touch_event_action(tev, 0) != mir_touch_action_down)
-                return false;
-
-            if (mir_touch_event_axis_value(tev, 0, mir_touch_axis_x) >= 5)
-                return false;
-
-            launcher.show();
-            gesture = true;
-            return true;
-        };
-
+    egmde::ShellCommands commands{runner, launcher, terminal_cmd};
 
     runner.add_stop_callback([&] { wallpaper.stop(); });
     runner.add_stop_callback([&] { launcher.stop(); });
@@ -139,8 +72,7 @@ int main(int argc, char const* argv[])
             external_client_launcher,
             StartupInternalClient{std::ref(launcher)},
             Keymap{},
-            AppendEventFilter{keyboard_shortcuts},
-            AppendEventFilter{touch_shortcuts},
-            set_window_management_policy<egmde::WindowManagerPolicy>(wallpaper)
+            AppendEventFilter{[&](MirEvent const* e) { return commands.input_event(e); }},
+            set_window_management_policy<egmde::WindowManagerPolicy>(wallpaper, commands)
         });
 }

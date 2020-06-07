@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-19 Octopull Ltd.
+ * Copyright © 2016-20 Octopull Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -17,6 +17,7 @@
  */
 
 #include "egwindowmanager.h"
+#include "egshellcommands.h"
 #include "egwallpaper.h"
 
 #include <miral/application_info.h>
@@ -24,13 +25,15 @@
 #include <miral/window_manager_tools.h>
 
 #include <linux/input.h>
+#include <unistd.h>
 
 using namespace mir::geometry;
 
 
-egmde::WindowManagerPolicy::WindowManagerPolicy(WindowManagerTools const& tools, Wallpaper const& wallpaper) :
+egmde::WindowManagerPolicy::WindowManagerPolicy(WindowManagerTools const& tools, Wallpaper const& wallpaper, ShellCommands&commands) :
     MinimalWindowManager{tools},
-    wallpaper{&wallpaper}
+    wallpaper{&wallpaper},
+    commands{&commands}
 {
 }
 
@@ -45,4 +48,27 @@ miral::WindowSpecification egmde::WindowManagerPolicy::place_new_window(
     }
 
     return result;
+}
+
+void egmde::WindowManagerPolicy::advise_new_window(const miral::WindowInfo &window_info)
+{
+    WindowManagementPolicy::advise_new_window(window_info);
+    if (window_info.window().application() == wallpaper->session())
+    {
+        commands->add_shell_app(wallpaper->session());
+    }
+    commands->advise_new_window_for(window_info.window().application());
+}
+
+void egmde::WindowManagerPolicy::advise_delete_window(const miral::WindowInfo &window_info)
+{
+    WindowManagementPolicy::advise_delete_window(window_info);
+    commands->advise_delete_window_for(window_info.window().application());
+}
+
+void egmde::WindowManagerPolicy::advise_delete_app(miral::ApplicationInfo const& application)
+{
+    WindowManagementPolicy::advise_delete_app(application);
+
+    commands->del_shell_app(application.application());
 }

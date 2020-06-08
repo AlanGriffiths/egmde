@@ -21,6 +21,9 @@
 
 #include <miral/minimal_window_manager.h>
 
+#include <map>
+#include <vector>
+
 namespace egmde
 {
 using namespace miral;
@@ -44,9 +47,25 @@ public:
 
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
 
+    void handle_modify_window(WindowInfo& window_info, WindowSpecification const& modifications) override;
+
+    void advise_adding_to_workspace(std::shared_ptr<Workspace> const& workspace,
+                                    std::vector<Window> const& windows) override;
+
 private:
+    void apply_workspace_hidden_to(Window const& window);
+    void apply_workspace_visible_to(Window const& window);
+    void change_active_workspace(std::shared_ptr<Workspace> const& ww,
+                                 std::shared_ptr<Workspace> const& old_active,
+                                 miral::Window const& window);
+
     Wallpaper const* const wallpaper;
     ShellCommands* const commands;
+
+    using ring_buffer = std::vector<std::shared_ptr<Workspace>>;
+    ring_buffer workspaces;
+    ring_buffer::iterator active_workspace;
+    std::map<std::shared_ptr<miral::Workspace>, miral::Window> workspace_to_active;
 };
 }
 

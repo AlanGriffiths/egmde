@@ -25,17 +25,34 @@
 #include <miral/window_manager_tools.h>
 
 #include <linux/input.h>
-#include <unistd.h>
-#include <signal.h>
 
 using namespace mir::geometry;
+using namespace miral;
 
+namespace
+{
+struct WorkspaceInfo
+{
+    bool in_hidden_workspace{false};
+
+    MirWindowState old_state;
+};
+
+inline WorkspaceInfo& workspace_info_for(WindowInfo const& info)
+{
+    return *std::static_pointer_cast<WorkspaceInfo>(info.userdata());
+}
+}
 
 egmde::WindowManagerPolicy::WindowManagerPolicy(WindowManagerTools const& tools, Wallpaper const& wallpaper, ShellCommands&commands) :
     MinimalWindowManager{tools},
     wallpaper{&wallpaper},
     commands{&commands}
 {
+    for (auto i = 0; i != 4; ++i)
+        workspaces.push_back(this->tools.create_workspace());
+
+    active_workspace = workspaces.begin();
 }
 
 miral::WindowSpecification egmde::WindowManagerPolicy::place_new_window(
@@ -48,6 +65,7 @@ miral::WindowSpecification egmde::WindowManagerPolicy::place_new_window(
         result.type() = mir_window_type_decoration;
     }
 
+    result.userdata() = std::make_shared<WorkspaceInfo>();
     return result;
 }
 
@@ -58,7 +76,18 @@ void egmde::WindowManagerPolicy::advise_new_window(const miral::WindowInfo &wind
     {
         commands->add_shell_app(wallpaper->session());
     }
+
     commands->advise_new_window_for(window_info.window().application());
+
+    if (auto const& parent = window_info.parent())
+    {
+        if (workspace_info_for(tools.info_for(parent)).in_hidden_workspace)
+            apply_workspace_hidden_to(window_info.window());
+    }
+    else
+    {
+        tools.add_tree_to_workspace(window_info.window(), *active_workspace);
+    }
 }
 
 void egmde::WindowManagerPolicy::advise_delete_window(const miral::WindowInfo &window_info)
@@ -117,8 +146,166 @@ bool egmde::WindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* k
 
             tools.modify_window(window_info, modifications);
             return true;
+
+        case KEY_UP:
+        {
+            auto const& old_active = *active_workspace;
+            auto const& new_active = *((active_workspace != workspaces.begin()) ? --active_workspace : (active_workspace = --workspaces.end()));
+            auto const& window = (mods & mir_input_event_modifier_shift) ? active_window : Window{};
+            change_active_workspace(new_active, old_active, window);
+            return true;
+        }
+
+        case KEY_DOWN:
+        {
+            auto const& old_active = *active_workspace;
+            auto const& new_active = *((++active_workspace != workspaces.end()) ? active_workspace : (active_workspace = workspaces.begin()));
+            auto const& window = (mods & mir_input_event_modifier_shift) ? active_window : Window{};
+            change_active_workspace(new_active, old_active, window);
+            return true;
+        }
+        }
+    }
+    else
+    {
+        switch (mir_keyboard_event_scan_code(kev))
+        {
+        case KEY_UP:
+        {
+            auto const& old_active = *active_workspace;
+            auto const& new_active = *((active_workspace != workspaces.begin()) ? --active_workspace : (active_workspace = --workspaces.end()));
+            change_active_workspace(new_active, old_active, Window{});
+            return true;
+        }
+
+        case KEY_DOWN:
+        {
+            auto const& old_active = *active_workspace;
+            auto const& new_active = *((++active_workspace != workspaces.end()) ? active_workspace : (active_workspace = workspaces.begin()));
+            change_active_workspace(new_active, old_active, Window{});
+            return true;
+        }
+        }
+    }
+    return false;
+}
+
+void egmde::WindowManagerPolicy::apply_workspace_hidden_to(Window const& window)
+{
+    auto const& window_info = tools.info_for(window);
+    auto& workspace_info = workspace_info_for(window_info);
+    if (!workspace_info.in_hidden_workspace)
+    {
+        workspace_info.in_hidden_workspace = true;
+        workspace_info.old_state = window_info.state();
+
+        WindowSpecification modifications;
+        modifications.state() = mir_window_state_hidden;
+        tools.place_and_size_for_state(modifications, window_info);
+        tools.modify_window(window_info.window(), modifications);
+    }
+}
+
+void egmde::WindowManagerPolicy::apply_workspace_visible_to(Window const& window)
+{
+    auto const& window_info = tools.info_for(window);
+    auto& workspace_info = workspace_info_for(window_info);
+    if (workspace_info.in_hidden_workspace)
+    {
+        workspace_info.in_hidden_workspace = false;
+        WindowSpecification modifications;
+        modifications.state() = workspace_info.old_state;
+        tools.place_and_size_for_state(modifications, window_info);
+        tools.modify_window(window_info.window(), modifications);
+    }
+}
+
+void egmde::WindowManagerPolicy::handle_modify_window(WindowInfo& window_info, WindowSpecification const& modifications)
+{
+    auto mods = modifications;
+
+    auto& workspace_info = workspace_info_for(window_info);
+
+    if (workspace_info.in_hidden_workspace && mods.state().is_set())
+        workspace_info.old_state = mods.state().consume();
+
+    MinimalWindowManager::handle_modify_window(window_info, mods);
+}
+
+void egmde::WindowManagerPolicy::change_active_workspace(
+    std::shared_ptr<Workspace> const& new_active,
+    std::shared_ptr<Workspace> const& old_active,
+    Window const& window)
+{
+    auto const old_active_window = tools.active_window();
+
+    if (!old_active_window)
+    {
+        // If there's no active window, the first shown grabs focus: get the right one
+        if (auto const ww = workspace_to_active[new_active])
+        {
+            tools.for_each_workspace_containing(ww, [&](std::shared_ptr<Workspace> const& ws)
+            {
+                if (ws == new_active)
+                {
+                    apply_workspace_visible_to(ww);
+                }
+            });
         }
     }
 
-    return false;
+    tools.remove_tree_from_workspace(window, old_active);
+    tools.add_tree_to_workspace(window, new_active);
+
+    tools.for_each_window_in_workspace(new_active, [&](Window const& ww)
+    {
+        if (ww.application() == wallpaper->session())
+            return; // wallpaper is taken care of automatically
+
+        apply_workspace_visible_to(ww);
+    });
+
+    bool hide_old_active = false;
+    tools.for_each_window_in_workspace(old_active, [&](Window const& ww)
+    {
+        if (ww.application() == wallpaper->session())
+            return; // wallpaper is taken care of automatically
+
+        if (ww == old_active_window)
+        {
+            // If we hide the active window focus will shift: do that last
+            hide_old_active = true;
+            return;
+        }
+
+        apply_workspace_hidden_to(ww);
+    });
+
+    if (hide_old_active)
+    {
+        apply_workspace_hidden_to(old_active_window);
+
+        // Remember the old active_window when we switch away
+        workspace_to_active[old_active] = old_active_window;
+    }
 }
+
+void egmde::WindowManagerPolicy::advise_adding_to_workspace(std::shared_ptr<Workspace> const& workspace,
+                                                            std::vector<Window> const& windows)
+{
+    if (windows.empty())
+        return;
+
+    for (auto const& window : windows)
+    {
+        if (workspace == *active_workspace)
+        {
+            apply_workspace_visible_to(window);
+        }
+        else
+        {
+            apply_workspace_hidden_to(window);
+        }
+    }
+}
+

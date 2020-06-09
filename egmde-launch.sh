@@ -4,18 +4,6 @@ set -e
 bindir=$(dirname $0)
 if [ "${bindir}" != "" ]; then bindir="${bindir}/"; fi
 
-while [ $# -gt 0 ]
-do
-  if [ "$1" == "--help" -o "$1" == "-h" ]
-  then
-    echo "$(basename $0) - Handy launch script for egmde on the desktop"
-    echo "Usage: $(basename $0) [shell options]"
-    exit 0
-  else break
-  fi
-  shift
-done
-
 if [ ! -d "${XDG_RUNTIME_DIR}" ]
 then
   echo "Error: XDG_RUNTIME_DIR '${XDG_RUNTIME_DIR}' does not exists"

@@ -31,6 +31,7 @@
 #include <miral/version.h>
 #include <miral/wayland_extensions.h>
 #include <miral/x11_support.h>
+#include <mir/fatal.h>
 
 #include <boost/filesystem.hpp>
 #include <linux/input.h>
@@ -59,6 +60,13 @@ int main(int argc, char const* argv[])
     runner.add_stop_callback([&] { wallpaper.stop(); });
     runner.add_stop_callback([&] { launcher.stop(); });
 
+    int no_of_workspaces = 1;
+    auto const update_workspaces = [&](int option)
+        {
+            // clamp no_of_workspaces to [1..32]
+            no_of_workspaces = std::min(std::max(option, 1), 32);
+        };
+
     return runner.run_with(
         {
             X11Support{},
@@ -68,11 +76,13 @@ int main(int argc, char const* argv[])
                               "wallpaper-top",    "Colour of wallpaper RGB", "0x000000"},
             CommandLineOption{[&](auto& option) { wallpaper.bottom(option);},
                               "wallpaper-bottom", "Colour of wallpaper RGB", EGMDE_WALLPAPER_BOTTOM},
+            pre_init(CommandLineOption{update_workspaces,
+                              "no-of-workspaces", "Number of workspaces [1..32]", no_of_workspaces}),
             StartupInternalClient{std::ref(wallpaper)},
             external_client_launcher,
             StartupInternalClient{std::ref(launcher)},
             Keymap{},
             AppendEventFilter{[&](MirEvent const* e) { return commands.input_event(e); }},
-            set_window_management_policy<egmde::WindowManagerPolicy>(wallpaper, commands)
+            set_window_management_policy<egmde::WindowManagerPolicy>(wallpaper, commands, no_of_workspaces)
         });
 }

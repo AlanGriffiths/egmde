@@ -34,7 +34,11 @@ class WindowManagerPolicy :
     public MinimalWindowManager
 {
 public:
-    WindowManagerPolicy(WindowManagerTools const& tools, Wallpaper const& wallpaper, ShellCommands& commands);
+    WindowManagerPolicy(
+        WindowManagerTools const& tools,
+        Wallpaper const& wallpaper,
+        ShellCommands& commands,
+        int const& no_of_workspaces);
 
     auto place_new_window(ApplicationInfo const& app_info, WindowSpecification const& request_parameters)
         -> WindowSpecification override;

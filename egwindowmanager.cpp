@@ -44,12 +44,16 @@ inline WorkspaceInfo& workspace_info_for(WindowInfo const& info)
 }
 }
 
-egmde::WindowManagerPolicy::WindowManagerPolicy(WindowManagerTools const& tools, Wallpaper const& wallpaper, ShellCommands&commands) :
+egmde::WindowManagerPolicy::WindowManagerPolicy(
+    WindowManagerTools const& tools,
+    Wallpaper const& wallpaper,
+    ShellCommands& commands,
+    int const& no_of_workspaces) :
     MinimalWindowManager{tools},
     wallpaper{&wallpaper},
     commands{&commands}
 {
-    for (auto i = 0; i != 4; ++i)
+    for (auto i = 0; i != no_of_workspaces; ++i)
         workspaces.push_back(this->tools.create_workspace());
 
     active_workspace = workspaces.begin();
@@ -237,6 +241,8 @@ void egmde::WindowManagerPolicy::change_active_workspace(
     std::shared_ptr<Workspace> const& old_active,
     Window const& window)
 {
+    if (new_active == old_active) return;
+
     auto const old_active_window = tools.active_window();
 
     if (!old_active_window)

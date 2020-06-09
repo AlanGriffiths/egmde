@@ -18,6 +18,8 @@
 
 #include "egshellcommands.h"
 #include "eglauncher.h"
+#include "egwindowmanager.h"
+
 #include <miral/runner.h>
 
 #include <linux/input.h>
@@ -104,6 +106,22 @@ auto egmde::ShellCommands::keyboard_shortcuts(MirKeyboardEvent const* kev) -> bo
         launcher.run_app(terminal_cmd, egmde::Launcher::Mode::x11);
         return true;
 
+    case KEY_LEFT:
+        wm->dock_active_window_left();
+        return true;
+
+    case KEY_RIGHT:
+        wm->dock_active_window_right();
+        return true;
+
+    case KEY_UP:
+        wm->workspace_up(mods & mir_input_event_modifier_shift);
+        return true;
+
+    case KEY_DOWN:
+        wm->workspace_down(mods & mir_input_event_modifier_shift);
+        return true;
+
     default:
         return false;
     }
@@ -150,4 +168,9 @@ auto egmde::ShellCommands::input_event(MirEvent const* event) -> bool
     default:
         return false;
     }
+}
+
+void egmde::ShellCommands::init_window_manager(WindowManagerPolicy* wm)
+{
+    this->wm = wm;
 }

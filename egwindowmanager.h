@@ -40,8 +40,14 @@ public:
         ShellCommands& commands,
         int const& no_of_workspaces);
 
+    void dock_active_window_left();
+    void dock_active_window_right();
+    void workspace_up(bool take_active);
+    void workspace_down(bool take_active);
+
+private:
     auto place_new_window(ApplicationInfo const& app_info, WindowSpecification const& request_parameters)
-        -> WindowSpecification override;
+    -> WindowSpecification override;
 
     void advise_new_window(const WindowInfo &window_info) override;
 
@@ -49,14 +55,11 @@ public:
 
     void advise_delete_window(const WindowInfo &window_info) override;
 
-    bool handle_keyboard_event(MirKeyboardEvent const* event) override;
-
     void handle_modify_window(WindowInfo& window_info, WindowSpecification const& modifications) override;
 
     void advise_adding_to_workspace(std::shared_ptr<Workspace> const& workspace,
                                     std::vector<Window> const& windows) override;
 
-private:
     void apply_workspace_hidden_to(Window const& window);
     void apply_workspace_visible_to(Window const& window);
     void change_active_workspace(std::shared_ptr<Workspace> const& ww,

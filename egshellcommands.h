@@ -35,13 +35,17 @@ namespace miral { class MirRunner; }
 namespace egmde
 {
 using namespace miral;
-class Wallpaper;
+
 class Launcher;
+class Wallpaper;
+class WindowManagerPolicy;
 
 class ShellCommands
 {
 public:
     ShellCommands(MirRunner& runner, Launcher& launcher, std::string const& terminal_cmd);
+
+    void init_window_manager(WindowManagerPolicy* wm);
 
     void advise_new_window_for(Application const& app);
     void advise_delete_window_for(Application const& app);
@@ -58,6 +62,7 @@ private:
     MirRunner& runner;
     Launcher& launcher;
     std::string const terminal_cmd;
+    WindowManagerPolicy* wm = nullptr;
 
     std::mutex mutex;
     std::set<Application> shell_apps;

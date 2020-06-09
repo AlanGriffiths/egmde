@@ -53,6 +53,8 @@ egmde::WindowManagerPolicy::WindowManagerPolicy(
     wallpaper{&wallpaper},
     commands{&commands}
 {
+    commands.init_window_manager(this);
+
     for (auto i = 0; i != no_of_workspaces; ++i)
         workspaces.push_back(this->tools.create_workspace());
 
@@ -107,91 +109,78 @@ void egmde::WindowManagerPolicy::advise_delete_app(miral::ApplicationInfo const&
     commands->del_shell_app(application.application());
 }
 
-bool egmde::WindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* kev)
+void egmde::WindowManagerPolicy::workspace_up(bool take_active)
 {
-    if (MinimalWindowManager::handle_keyboard_event(kev))
-        return true;
-
-    if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
-        return false;
-
-    auto const mods = mir_keyboard_event_modifiers(kev);
-
-    if (!(mods & mir_input_event_modifier_alt) || !(mods & mir_input_event_modifier_ctrl))
-        return false;
-
-    if (auto active_window = tools.active_window())
-    {
-        auto active_output = tools.active_output();
-        auto& window_info = tools.info_for(active_window);
-        WindowSpecification modifications;
-
-        switch (mir_keyboard_event_scan_code(kev))
+    tools.invoke_under_lock(
+        [this, take_active]
         {
-        case KEY_LEFT:
-            modifications.state() = mir_window_state_vertmaximized;
-            tools.place_and_size_for_state(modifications, window_info);
-            modifications.top_left() = active_output.top_left;
-            tools.modify_window(window_info, modifications);
-            return true;
-
-        case KEY_RIGHT:
-            modifications.state() = mir_window_state_vertmaximized;
-            tools.place_and_size_for_state(modifications, window_info);
-
-            if (modifications.size().is_set())
-            {
-                modifications.top_left() = active_output.top_right() - as_delta(modifications.size().value().width);
-            }
-            else
-            {
-                modifications.top_left() = active_output.top_right() - as_delta(active_window.size().width);
-            }
-
-            tools.modify_window(window_info, modifications);
-            return true;
-
-        case KEY_UP:
-        {
+            auto const& window = take_active ? tools.active_window() : Window{};
             auto const& old_active = *active_workspace;
-            auto const& new_active = *((active_workspace != workspaces.begin()) ? --active_workspace : (active_workspace = --workspaces.end()));
-            auto const& window = (mods & mir_input_event_modifier_shift) ? active_window : Window{};
+            auto const& new_active = *((active_workspace != workspaces.begin()) ? --active_workspace
+                                                                                : (active_workspace = --workspaces.end()));
             change_active_workspace(new_active, old_active, window);
-            return true;
-        }
+        });
+}
 
-        case KEY_DOWN:
+void egmde::WindowManagerPolicy::workspace_down(bool take_active)
+{
+    tools.invoke_under_lock(
+        [this, take_active]
         {
+            auto const& window = take_active ? tools.active_window() : Window{};
             auto const& old_active = *active_workspace;
             auto const& new_active = *((++active_workspace != workspaces.end()) ? active_workspace : (active_workspace = workspaces.begin()));
-            auto const& window = (mods & mir_input_event_modifier_shift) ? active_window : Window{};
             change_active_workspace(new_active, old_active, window);
-            return true;
-        }
-        }
-    }
-    else
-    {
-        switch (mir_keyboard_event_scan_code(kev))
-        {
-        case KEY_UP:
-        {
-            auto const& old_active = *active_workspace;
-            auto const& new_active = *((active_workspace != workspaces.begin()) ? --active_workspace : (active_workspace = --workspaces.end()));
-            change_active_workspace(new_active, old_active, Window{});
-            return true;
-        }
+        });
+}
 
-        case KEY_DOWN:
+void egmde::WindowManagerPolicy::dock_active_window_left()
+{
+    tools.invoke_under_lock(
+        [this]
         {
-            auto const& old_active = *active_workspace;
-            auto const& new_active = *((++active_workspace != workspaces.end()) ? active_workspace : (active_workspace = workspaces.begin()));
-            change_active_workspace(new_active, old_active, Window{});
-            return true;
-        }
-        }
-    }
-    return false;
+            if (auto active_window = tools.active_window())
+            {
+                auto active_output = tools.active_output();
+                auto& window_info = tools.info_for(active_window);
+                WindowSpecification modifications;
+
+                modifications.state() = mir_window_state_vertmaximized;
+                tools.place_and_size_for_state(modifications, window_info);
+                modifications.top_left() = active_output.top_left;
+                tools.modify_window(window_info, modifications);
+            }
+        });
+}
+
+void egmde::WindowManagerPolicy::dock_active_window_right()
+{
+    tools.invoke_under_lock(
+        [this]
+        {
+            if (auto active_window = tools.active_window())
+            {
+                auto active_output = tools.active_output();
+                auto& window_info = tools.info_for(active_window);
+                WindowSpecification modifications;
+
+                modifications.state() = mir_window_state_vertmaximized;
+                tools.place_and_size_for_state(modifications, window_info);
+
+                if (modifications.size().is_set())
+                {
+                    modifications.top_left() =
+                        active_output.top_right() - as_delta(modifications.size().value().width);
+                }
+                else
+                {
+                    modifications.top_left() =
+                        active_output.top_right() - as_delta(active_window.size().width);
+                }
+
+                tools.modify_window(window_info, modifications);
+            }
+        });
 }
 
 void egmde::WindowManagerPolicy::apply_workspace_hidden_to(Window const& window)

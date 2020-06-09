@@ -22,10 +22,11 @@ then
   exit 1
 fi
 
-if [ ! -z "${WAYLAND_DISPLAY}" ] && [ -e "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" ]
+if [ ! -z "${WAYLAND_DISPLAY}" ] && [ -O "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" ]
 then
-  echo "Error: wayland endpoint '${WAYLAND_DISPLAY}' already exists"
-  exit 1
+  echo "Info: wayland endpoint '${WAYLAND_DISPLAY}' already exists, using it as host"
+  export MIR_SERVER_WAYLAND_HOST=${WAYLAND_DISPLAY}
+  unset WAYLAND_DISPLAY
 fi
 
 keymap_index=$(gsettings get org.gnome.desktop.input-sources current | cut -d\  -f 2)

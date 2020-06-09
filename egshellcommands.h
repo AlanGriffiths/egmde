@@ -63,6 +63,7 @@ private:
     Launcher& launcher;
     std::string const terminal_cmd;
     WindowManagerPolicy* wm = nullptr;
+    bool shell_commands_active = true;
 
     std::mutex mutex;
     std::set<Application> shell_apps;

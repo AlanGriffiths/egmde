@@ -72,7 +72,18 @@ auto egmde::ShellCommands::keyboard_shortcuts(MirKeyboardEvent const* kev) -> bo
     if (!(mods & mir_input_event_modifier_alt) || !(mods & mir_input_event_modifier_ctrl))
         return false;
 
-    switch (mir_keyboard_event_scan_code(kev))
+    auto const scan_code = mir_keyboard_event_scan_code(kev);
+
+    if (scan_code == KEY_DELETE && mir_keyboard_event_action(kev) == mir_keyboard_action_down)
+    {
+        shell_commands_active = !shell_commands_active;
+        return true;
+    }
+
+    if (!shell_commands_active)
+        return false;
+
+    switch (scan_code)
     {
     case KEY_A:
         if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)

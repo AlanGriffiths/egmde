@@ -36,7 +36,11 @@ public:
 
     // These operators are the protocol for an "Internal Client"
     void operator()(wl_display* display);
-    void operator()(std::weak_ptr<mir::scene::Session> const&){ }
+    void operator()(std::weak_ptr<mir::scene::Session> const& session)
+    {
+        std::lock_guard<decltype(mutex)> lock{mutex};
+        weak_session = session;
+    }
 
     void show();
 
@@ -45,9 +49,16 @@ public:
     enum class Mode { wayland, x11, wayland_debug, x11_debug};
     void run_app(std::string app, Mode mode) const;
 
+    auto session() const -> std::shared_ptr<mir::scene::Session>
+    {
+        std::lock_guard<decltype(mutex)> lock{mutex};
+        return weak_session.lock();
+    }
+
 private:
     miral::ExternalClientLauncher& external_client_launcher;
     std::mutex mutable mutex;
+    std::weak_ptr<mir::scene::Session> weak_session;
 
     struct Self;
     std::weak_ptr<Self> self;

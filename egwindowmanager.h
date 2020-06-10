@@ -21,25 +21,58 @@
 
 #include <miral/minimal_window_manager.h>
 
+#include <map>
+#include <vector>
+
 namespace egmde
 {
 using namespace miral;
 class Wallpaper;
+class ShellCommands;
 
 class WindowManagerPolicy :
     public MinimalWindowManager
 {
 public:
-    WindowManagerPolicy(WindowManagerTools const& tools, Wallpaper const& wallpaper);
+    WindowManagerPolicy(
+        WindowManagerTools const& tools,
+        Wallpaper const& wallpaper,
+        ShellCommands& commands,
+        int const& no_of_workspaces);
 
-    auto place_new_window(ApplicationInfo const& app_info, WindowSpecification const& request_parameters)
-        -> WindowSpecification override;
+    void dock_active_window_left();
+    void dock_active_window_right();
+    void workspace_up(bool take_active);
+    void workspace_down(bool take_active);
 
 private:
-    Wallpaper const* wallpaper;
+    auto place_new_window(ApplicationInfo const& app_info, WindowSpecification const& request_parameters)
+    -> WindowSpecification override;
 
-    void keep_size_within_limits(
-        WindowInfo const& window_info, Displacement& delta, Width& new_width, Height& new_height) const;
+    void advise_new_window(const WindowInfo &window_info) override;
+
+    void advise_delete_app(ApplicationInfo const& application) override;
+
+    void advise_delete_window(const WindowInfo &window_info) override;
+
+    void handle_modify_window(WindowInfo& window_info, WindowSpecification const& modifications) override;
+
+    void advise_adding_to_workspace(std::shared_ptr<Workspace> const& workspace,
+                                    std::vector<Window> const& windows) override;
+
+    void apply_workspace_hidden_to(Window const& window);
+    void apply_workspace_visible_to(Window const& window);
+    void change_active_workspace(std::shared_ptr<Workspace> const& ww,
+                                 std::shared_ptr<Workspace> const& old_active,
+                                 miral::Window const& window);
+
+    Wallpaper const* const wallpaper;
+    ShellCommands* const commands;
+
+    using ring_buffer = std::vector<std::shared_ptr<Workspace>>;
+    ring_buffer workspaces;
+    ring_buffer::iterator active_workspace;
+    std::map<std::shared_ptr<miral::Workspace>, miral::Window> workspace_to_active;
 };
 }
 

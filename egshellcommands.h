@@ -25,6 +25,8 @@
 #include <miral/toolkit_event.h>
 
 using namespace miral::toolkit;
+#else
+#include <mir_toolkit/event.h>
 #endif
 
 #include <set>

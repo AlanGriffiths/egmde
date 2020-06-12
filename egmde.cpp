@@ -36,12 +36,6 @@
 #include <boost/filesystem.hpp>
 #include <linux/input.h>
 
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(3, 0, 0)
-#include <miral/toolkit_event.h>
-
-using namespace miral::toolkit;
-#endif
-
 using namespace miral;
 
 int main(int argc, char const* argv[])

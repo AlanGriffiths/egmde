@@ -69,6 +69,7 @@ miral::WindowSpecification egmde::WindowManagerPolicy::place_new_window(
     if (app_info.application() == wallpaper->session())
     {
         result.type() = mir_window_type_decoration;
+        result.depth_layer() = mir_depth_layer_background;
     }
 
     result.userdata() = std::make_shared<WorkspaceInfo>();

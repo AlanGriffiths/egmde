@@ -79,12 +79,15 @@ miral::WindowSpecification egmde::WindowManagerPolicy::place_new_window(
 void egmde::WindowManagerPolicy::advise_new_window(const miral::WindowInfo &window_info)
 {
     WindowManagementPolicy::advise_new_window(window_info);
-    if (window_info.window().application() == wallpaper->session())
-    {
-        commands->add_shell_app(wallpaper->session());
-    }
 
-    commands->advise_new_window_for(window_info.window().application());
+    switch (window_info.depth_layer())
+    {
+    case mir_depth_layer_application:
+    case mir_depth_layer_always_on_top:
+        commands->advise_new_window_for(window_info.window().application());
+
+    default:;
+    };
 
     if (auto const& parent = window_info.parent())
     {
@@ -148,7 +151,10 @@ void egmde::WindowManagerPolicy::dock_active_window_left()
 
                 modifications.state() = mir_window_state_vertmaximized;
                 tools.place_and_size_for_state(modifications, window_info);
-                modifications.top_left() = active_output.top_left;
+                if (modifications.size().is_set())
+                {
+                    modifications.top_left().value().x = active_output.top_left.x;
+                }
                 tools.modify_window(window_info, modifications);
             }
         });
@@ -170,13 +176,8 @@ void egmde::WindowManagerPolicy::dock_active_window_right()
 
                 if (modifications.size().is_set())
                 {
-                    modifications.top_left() =
-                        active_output.top_right() - as_delta(modifications.size().value().width);
-                }
-                else
-                {
-                    modifications.top_left() =
-                        active_output.top_right() - as_delta(active_window.size().width);
+                    modifications.top_left().value().x =
+                        active_output.top_right().x - as_delta(modifications.size().value().width);
                 }
 
                 tools.modify_window(window_info, modifications);
@@ -255,26 +256,38 @@ void egmde::WindowManagerPolicy::change_active_workspace(
 
     tools.for_each_window_in_workspace(new_active, [&](Window const& ww)
     {
-        if (ww.application() == wallpaper->session())
-            return; // wallpaper is taken care of automatically
+        switch (tools.info_for(ww).depth_layer())
+        {
+        case mir_depth_layer_application:
+        case mir_depth_layer_always_on_top:
+            apply_workspace_visible_to(ww);
+            return;
 
-        apply_workspace_visible_to(ww);
+        default:
+            return; // wallpaper is taken care of automatically
+        };
     });
 
     bool hide_old_active = false;
     tools.for_each_window_in_workspace(old_active, [&](Window const& ww)
     {
-        if (ww.application() == wallpaper->session())
-            return; // wallpaper is taken care of automatically
-
-        if (ww == old_active_window)
+        switch (tools.info_for(ww).depth_layer())
         {
-            // If we hide the active window focus will shift: do that last
-            hide_old_active = true;
-            return;
-        }
+        case mir_depth_layer_application:
+        case mir_depth_layer_always_on_top:
+            if (ww == old_active_window)
+            {
+                // If we hide the active window focus will shift: do that last
+                hide_old_active = true;
+                return;
+            }
 
-        apply_workspace_hidden_to(ww);
+            apply_workspace_hidden_to(ww);
+            return;
+
+        default:
+            return; // wallpaper is taken care of automatically
+        };
     });
 
     if (hide_old_active)

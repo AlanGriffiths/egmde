@@ -150,11 +150,11 @@ void egmde::WindowManagerPolicy::dock_active_window_left()
                 WindowSpecification modifications;
 
                 modifications.state() = mir_window_state_vertmaximized;
+                modifications.top_left() = active_window.top_left();
+                modifications.size() = active_window.size();
                 tools.place_and_size_for_state(modifications, window_info);
-                if (modifications.size().is_set())
-                {
-                    modifications.top_left().value().x = active_output.top_left.x;
-                }
+
+                modifications.top_left().value().x = active_output.top_left.x;
                 tools.modify_window(window_info, modifications);
             }
         });
@@ -172,13 +172,12 @@ void egmde::WindowManagerPolicy::dock_active_window_right()
                 WindowSpecification modifications;
 
                 modifications.state() = mir_window_state_vertmaximized;
+                modifications.top_left() = active_window.top_left();
+                modifications.size() = active_window.size();
                 tools.place_and_size_for_state(modifications, window_info);
 
-                if (modifications.size().is_set())
-                {
-                    modifications.top_left().value().x =
-                        active_output.top_right().x - as_delta(modifications.size().value().width);
-                }
+                modifications.top_left().value().x =
+                    active_output.top_right().x - as_delta(modifications.size().value().width);
 
                 tools.modify_window(window_info, modifications);
             }

@@ -264,6 +264,133 @@ auto list_desktop_files() -> file_list
     return scan_for_desktop_files(paths);
 
 }
+
+void run_app(ExternalClientLauncher& external_client_launcher, std::string app, egmde::Launcher::Mode mode)
+{
+    auto ws = app.find('%');
+    if (ws != std::string::npos)
+    {
+        // TODO handle exec variables:
+        // https://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables
+        if (app[ws-1] == ' ')
+            --ws;
+        app = app.substr(0, ws);    // For now ignore the rest of the Exec value
+    }
+
+    std::vector<std::string> command;
+
+    char const* start = nullptr;
+    char const* end = nullptr;
+
+    static char const* launch_prefix = getenv("EGMDE_LAUNCH_PREFIX");
+    if (launch_prefix)
+    {
+        for (start = launch_prefix; (end = strchr(start, ' ')); start = end+1)
+        {
+            if (start != end)
+                command.emplace_back(start, end);
+        }
+
+        command.emplace_back(start);
+    }
+
+    switch (mode)
+    {
+    case egmde::Launcher::Mode::wayland_debug:
+    case egmde::Launcher::Mode::x11_debug:
+        command.emplace_back("gnome-terminal");
+        if (boost::filesystem::exists("/usr/bin/gnome-terminal.real"))
+            command.emplace_back("--disable-factory");
+        command.emplace_back("--");
+        command.emplace_back("bash");
+        command.emplace_back("-c");
+        command.emplace_back(app + ";read -p \"Press any key to continue... \" -n1 -s");
+        break;
+
+    case egmde::Launcher::Mode::wayland:
+    case egmde::Launcher::Mode::x11:
+    {
+        std::string token;
+        char in_quote = '\0';
+        bool escaping = false;
+
+        auto push_token = [&]()
+        {
+            if (!token.empty())
+            {
+                command.push_back(std::move(token));
+                token.clear();
+            }
+        };
+
+        for (auto c : app)
+        {
+            if (escaping)
+            {
+                // end escape
+                escaping = false;
+                token += c;
+                continue;
+            }
+
+            switch (c)
+            {
+            case '\\':
+                // start escape
+                escaping = true;
+                continue;
+
+            case '\'':
+            case '\"':
+                if (in_quote == '\0')
+                {
+                    // start quoted sequence
+                    in_quote = c;
+                    continue;
+                }
+                else if (c == in_quote)
+                {
+                    // end quoted sequence
+                    in_quote = '\0';
+                    continue;
+                }
+                else
+                {
+                    break;
+                }
+
+            default:
+                break;
+            }
+
+            if (!isspace(c) || in_quote)
+            {
+                token += c;
+            }
+            else
+            {
+                push_token();
+            }
+        }
+
+        push_token();
+    }
+        break;
+    }
+
+    switch (mode)
+    {
+    case egmde::Launcher::Mode::wayland:
+    case egmde::Launcher::Mode::wayland_debug:
+        external_client_launcher.launch(command);
+        break;
+
+    case egmde::Launcher::Mode::x11:
+    case egmde::Launcher::Mode::x11_debug:
+        external_client_launcher.launch_using_x11(command);
+        break;
+    }
+}
 }
 
 struct egmde::Launcher::Self : egmde::FullscreenClient
@@ -276,7 +403,6 @@ struct egmde::Launcher::Self : egmde::FullscreenClient
 
     void start();
 
-    void run_app(std::string app, Mode mode) const;
 private:
     void prev_app();
     void next_app();
@@ -344,10 +470,7 @@ void egmde::Launcher::operator()(wl_display* display)
 
 void egmde::Launcher::run_app(std::string app, Mode mode) const
 {
-    if (auto ss = self.lock())
-    {
-        ss->run_app(app, mode);
-    }
+    ::run_app(external_client_launcher, app, mode);
 }
 
 void egmde::Launcher::Self::start()
@@ -510,137 +633,10 @@ void egmde::Launcher::Self::run_app(Mode mode)
 {
     auto app = current_app->exec;
 
-    run_app(app, mode);
+    ::run_app(external_client_launcher, app, mode);
 
     running = false;
     for_each_surface([this](auto& info) { this->draw_screen(info); });
-}
-
-void egmde::Launcher::Self::run_app(std::string app, Mode mode) const
-{
-    auto ws = app.find('%');
-    if (ws != std::string::npos)
-    {
-        // TODO handle exec variables:
-        // https://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables
-        if (app[ws-1] == ' ')
-            --ws;
-        app = app.substr(0, ws);    // For now ignore the rest of the Exec value
-    }
-
-    std::vector<std::string> command;
-
-    char const* start = nullptr;
-    char const* end = nullptr;
-
-    static char const* launch_prefix = getenv("EGMDE_LAUNCH_PREFIX");
-    if (launch_prefix)
-    {
-        for (start = launch_prefix; (end = strchr(start, ' ')); start = end+1)
-        {
-            if (start != end)
-                command.emplace_back(start, end);
-        }
-
-        command.emplace_back(start);
-    }
-
-    switch (mode)
-    {
-    case Mode::wayland_debug:
-    case Mode::x11_debug:
-        command.emplace_back("gnome-terminal");
-        if (boost::filesystem::exists("/usr/bin/gnome-terminal.real"))
-            command.emplace_back("--disable-factory");
-        command.emplace_back("--");
-        command.emplace_back("bash");
-        command.emplace_back("-c");
-        command.emplace_back(app + ";read -p \"Press any key to continue... \" -n1 -s");
-        break;
-
-    case Mode::wayland:
-    case Mode::x11:
-        {
-            std::string token;
-            char in_quote = '\0';
-            bool escaping = false;
-
-            auto push_token = [&]()
-                {
-                    if (!token.empty())
-                    {
-                        command.push_back(std::move(token));
-                        token.clear();
-                    }
-                };
-
-            for (auto c : app)
-            {
-                if (escaping)
-                {
-                    // end escape
-                    escaping = false;
-                    token += c;
-                    continue;
-                }
-
-                switch (c)
-                {
-                case '\\':
-                    // start escape
-                    escaping = true;
-                    continue;
-
-                case '\'':
-                case '\"':
-                    if (in_quote == '\0')
-                    {
-                        // start quoted sequence
-                        in_quote = c;
-                        continue;
-                    }
-                    else if (c == in_quote)
-                    {
-                        // end quoted sequence
-                        in_quote = '\0';
-                        continue;
-                    }
-                    else
-                    {
-                        break;
-                    }
-
-                default:
-                    break;
-                }
-
-                if (!isspace(c) || in_quote)
-                {
-                    token += c;
-                }
-                else
-                {
-                    push_token();
-                }
-            }
-
-            push_token();
-        }
-        break;
-    }
-
-    switch (mode)
-    {
-    case Mode::wayland:
-    case Mode::wayland_debug:
-        external_client_launcher.launch(command);
-        break;
-
-    case Mode::x11:
-    case Mode::x11_debug:
-        external_client_launcher.launch_using_x11(command);
-        break;
-    }
 }
 
 void egmde::Launcher::Self::next_app()

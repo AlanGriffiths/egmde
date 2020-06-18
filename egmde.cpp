@@ -47,6 +47,16 @@ int main(int argc, char const* argv[])
     ExternalClientLauncher external_client_launcher;
     egmde::Launcher launcher{external_client_launcher};
 
+    auto run_apps = [&](std::string const& apps)
+    {
+        for (auto i = begin(apps); i != end(apps); )
+        {
+            auto const j = find(i, end(apps), ':');
+            launcher.run_app(std::string{i, j}, egmde::Launcher::Mode::wayland);
+            if ((i = j) != end(apps)) ++i;
+        }
+    };
+
     auto const terminal_cmd = std::string{argv[0]} + "-terminal";
 
     egmde::ShellCommands commands{runner, launcher, terminal_cmd};
@@ -72,6 +82,7 @@ int main(int argc, char const* argv[])
                               "wallpaper-bottom", "Colour of wallpaper RGB", EGMDE_WALLPAPER_BOTTOM},
             pre_init(CommandLineOption{update_workspaces,
                               "no-of-workspaces", "Number of workspaces [1..32]", no_of_workspaces}),
+            CommandLineOption{run_apps, "shell-components", "Colon separated shell components to launch on startup", ""},
             StartupInternalClient{std::ref(wallpaper)},
             external_client_launcher,
             StartupInternalClient{std::ref(launcher)},

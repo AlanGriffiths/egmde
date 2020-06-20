@@ -60,6 +60,8 @@ private:
     void advise_adding_to_workspace(std::shared_ptr<Workspace> const& workspace,
                                     std::vector<Window> const& windows) override;
 
+    bool handle_keyboard_event(MirKeyboardEvent const* event) override;
+
     void apply_workspace_hidden_to(Window const& window);
     void apply_workspace_visible_to(Window const& window);
     void change_active_workspace(std::shared_ptr<Workspace> const& ww,
@@ -72,6 +74,8 @@ private:
     using ring_buffer = std::vector<std::shared_ptr<Workspace>>;
     ring_buffer workspaces;
     ring_buffer::iterator active_workspace;
+
+private:
     std::map<std::shared_ptr<miral::Workspace>, miral::Window> workspace_to_active;
 };
 }

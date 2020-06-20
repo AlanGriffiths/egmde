@@ -321,3 +321,8 @@ void egmde::WindowManagerPolicy::advise_adding_to_workspace(std::shared_ptr<Work
     }
 }
 
+bool egmde::WindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* event)
+{
+    return commands->shell_keyboard_enabled() && MinimalWindowManager::handle_keyboard_event(event);
+}
+

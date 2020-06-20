@@ -29,6 +29,7 @@ using namespace miral::toolkit;
 #include <mir_toolkit/event.h>
 #endif
 
+#include <atomic>
 #include <set>
 #include <string>
 #include <mutex>
@@ -56,6 +57,8 @@ public:
     void del_shell_app(Application const& app);
 
     auto input_event(MirEvent const* event) -> bool;
+    auto shell_keyboard_enabled() const -> bool
+        { return shell_commands_active; }
 
 private:
     auto keyboard_shortcuts(MirKeyboardEvent const* kev) -> bool;
@@ -65,7 +68,7 @@ private:
     Launcher& launcher;
     std::string const terminal_cmd;
     WindowManagerPolicy* wm = nullptr;
-    bool shell_commands_active = true;
+    std::atomic<bool> shell_commands_active = true;
 
     std::mutex mutex;
     std::set<Application> shell_apps;

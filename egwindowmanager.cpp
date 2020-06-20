@@ -42,6 +42,19 @@ inline WorkspaceInfo& workspace_info_for(WindowInfo const& info)
 {
     return *std::static_pointer_cast<WorkspaceInfo>(info.userdata());
 }
+
+inline bool is_application(MirDepthLayer layer)
+{
+    switch (layer)
+    {
+    case mir_depth_layer_application:
+    case mir_depth_layer_always_on_top:
+        return true;
+
+    default:;
+        return false;
+    };
+}
 }
 
 egmde::WindowManagerPolicy::WindowManagerPolicy(
@@ -80,14 +93,10 @@ void egmde::WindowManagerPolicy::advise_new_window(const miral::WindowInfo &wind
 {
     WindowManagementPolicy::advise_new_window(window_info);
 
-    switch (window_info.depth_layer())
+    if (is_application(window_info.depth_layer()))
     {
-    case mir_depth_layer_application:
-    case mir_depth_layer_always_on_top:
         commands->advise_new_window_for(window_info.window().application());
-
-    default:;
-    };
+    }
 
     if (auto const& parent = window_info.parent())
     {
@@ -234,8 +243,10 @@ void egmde::WindowManagerPolicy::change_active_workspace(
     if (new_active == old_active) return;
 
     auto const old_active_window = tools.active_window();
+    auto const old_active_window_shell = old_active_window &&
+        !is_application(tools.info_for(old_active_window).depth_layer());
 
-    if (!old_active_window)
+    if (!old_active_window || old_active_window_shell)
     {
         // If there's no active window, the first shown grabs focus: get the right one
         if (auto const ww = workspace_to_active[new_active])
@@ -247,6 +258,10 @@ void egmde::WindowManagerPolicy::change_active_workspace(
                     apply_workspace_visible_to(ww);
                 }
             });
+
+            // If focus was on a shell window, put it on an app
+            if (old_active_window_shell)
+                tools.select_active_window(ww);
         }
     }
 
@@ -255,25 +270,17 @@ void egmde::WindowManagerPolicy::change_active_workspace(
 
     tools.for_each_window_in_workspace(new_active, [&](Window const& ww)
     {
-        switch (tools.info_for(ww).depth_layer())
+        if (is_application(tools.info_for(ww).depth_layer()))
         {
-        case mir_depth_layer_application:
-        case mir_depth_layer_always_on_top:
             apply_workspace_visible_to(ww);
-            return;
-
-        default:
-            return; // wallpaper is taken care of automatically
-        };
+        }
     });
 
     bool hide_old_active = false;
     tools.for_each_window_in_workspace(old_active, [&](Window const& ww)
     {
-        switch (tools.info_for(ww).depth_layer())
+        if (is_application(tools.info_for(ww).depth_layer()))
         {
-        case mir_depth_layer_application:
-        case mir_depth_layer_always_on_top:
             if (ww == old_active_window)
             {
                 // If we hide the active window focus will shift: do that last
@@ -283,10 +290,7 @@ void egmde::WindowManagerPolicy::change_active_workspace(
 
             apply_workspace_hidden_to(ww);
             return;
-
-        default:
-            return; // wallpaper is taken care of automatically
-        };
+        }
     });
 
     if (hide_old_active)

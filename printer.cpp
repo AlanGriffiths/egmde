@@ -89,7 +89,8 @@ void egmde::Printer::print(int32_t width, int32_t height, char unsigned* region_
 
     int title_row = 0;
 
-    for (auto const& title_ : lines)
+    for (auto title_ : lines)
+    try
     {
         auto const title = converter.from_bytes(title_.c_str());
 
@@ -138,6 +139,14 @@ void egmde::Printer::print(int32_t width, int32_t height, char unsigned* region_
             base_x += glyph->advance.x >> 6;
             base_y += glyph->advance.y >> 6;
         }
+    }
+    catch (std::exception const& e)
+    {
+        puts(e.what());
+        puts(title_.c_str());
+        for (auto c : title_)
+            printf("%2.2x", c & 0xff);
+        printf("\n");
     }
 }
 

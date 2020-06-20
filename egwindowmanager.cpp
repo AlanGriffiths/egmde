@@ -161,8 +161,29 @@ void egmde::WindowManagerPolicy::dock_active_window_left()
                 modifications.state() = mir_window_state_vertmaximized;
                 modifications.top_left() = active_window.top_left();
                 modifications.size() = active_window.size();
-                tools.place_and_size_for_state(modifications, window_info);
 
+                if (window_info.state() != mir_window_state_vertmaximized ||
+                    active_window.top_left().x != active_output.top_left.x)
+                {
+                    modifications.size().value().width = active_output.size.width / 2;
+                }
+                else
+                {
+                    if (modifications.size().value().width == active_output.size.width / 2)
+                    {
+                        modifications.size().value().width = active_output.size.width / 3;
+                    }
+                    else if (modifications.size().value().width < active_output.size.width / 2)
+                    {
+                        modifications.size().value().width = 2*active_output.size.width / 3;
+                    }
+                    else
+                    {
+                        modifications.size().value().width = active_output.size.width / 2;
+                    }
+                }
+
+                tools.place_and_size_for_state(modifications, window_info);
                 modifications.top_left().value().x = active_output.top_left.x;
                 tools.modify_window(window_info, modifications);
             }
@@ -183,11 +204,31 @@ void egmde::WindowManagerPolicy::dock_active_window_right()
                 modifications.state() = mir_window_state_vertmaximized;
                 modifications.top_left() = active_window.top_left();
                 modifications.size() = active_window.size();
-                tools.place_and_size_for_state(modifications, window_info);
 
+                if (window_info.state() != mir_window_state_vertmaximized ||
+                    active_window.top_left().x == active_output.top_left.x)
+                {
+                    modifications.size().value().width = active_output.size.width / 2;
+                }
+                else
+                {
+                    if (modifications.size().value().width == active_output.size.width / 2)
+                    {
+                        modifications.size().value().width = active_output.size.width / 3;
+                    }
+                    else if (modifications.size().value().width < active_output.size.width / 2)
+                    {
+                        modifications.size().value().width = 2*active_output.size.width / 3;
+                    }
+                    else
+                    {
+                        modifications.size().value().width = active_output.size.width / 2;
+                    }
+                }
+
+                tools.place_and_size_for_state(modifications, window_info);
                 modifications.top_left().value().x =
                     active_output.top_right().x - as_delta(modifications.size().value().width);
-
                 tools.modify_window(window_info, modifications);
             }
         });

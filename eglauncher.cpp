@@ -477,14 +477,6 @@ void egmde::Launcher::Self::start()
 {
     if (!running.exchange(true))
     {
-        auto const new_terminal = std::find_if(
-            begin(apps), end(apps),
-            [](app_details const& app)
-                { return app.name == "Terminal"; });
-
-        if (new_terminal != end(apps))
-            current_app = new_terminal;
-
         showing = nullptr;
         for_each_surface([this](auto& info) { this->draw_screen(info);});
     }

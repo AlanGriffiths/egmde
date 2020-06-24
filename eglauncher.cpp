@@ -265,7 +265,7 @@ auto list_desktop_files() -> file_list
 
 }
 
-void run_app(ExternalClientLauncher& external_client_launcher, std::string app, egmde::Launcher::Mode mode)
+auto run_app(ExternalClientLauncher& external_client_launcher, std::string app, egmde::Launcher::Mode mode) -> pid_t
 {
     auto ws = app.find('%');
     if (ws != std::string::npos)
@@ -382,13 +382,23 @@ void run_app(ExternalClientLauncher& external_client_launcher, std::string app, 
     {
     case egmde::Launcher::Mode::wayland:
     case egmde::Launcher::Mode::wayland_debug:
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(3, 0, 0)
+        return external_client_launcher.launch(command);
+#else
         external_client_launcher.launch(command);
-        break;
+        return external_client_launcher.pid();
+#endif
 
     case egmde::Launcher::Mode::x11:
     case egmde::Launcher::Mode::x11_debug:
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(3, 0, 0)
+        return external_client_launcher.launch_using_x11(command);
+#else
         external_client_launcher.launch_using_x11(command);
-        break;
+        return external_client_launcher.pid();
+#endif
+    default:
+        return -1; // We can't get here, but the compiler complains
     }
 }
 }
@@ -468,9 +478,9 @@ void egmde::Launcher::operator()(wl_display* display)
     std::lock_guard<decltype(mutex)> lock{mutex};
 }
 
-void egmde::Launcher::run_app(std::string app, Mode mode) const
+auto egmde::Launcher::run_app(std::string app, Mode mode) const -> pid_t
 {
-    ::run_app(external_client_launcher, app, mode);
+    return ::run_app(external_client_launcher, app, mode);
 }
 
 void egmde::Launcher::Self::start()

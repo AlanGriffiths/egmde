@@ -47,15 +47,37 @@ int main(int argc, char const* argv[])
     ExternalClientLauncher external_client_launcher;
     egmde::Launcher launcher{external_client_launcher};
 
+    std::set<pid_t> shell_component_pids;
+
     auto run_apps = [&](std::string const& apps)
     {
         for (auto i = begin(apps); i != end(apps); )
         {
             auto const j = find(i, end(apps), ':');
-            launcher.run_app(std::string{i, j}, egmde::Launcher::Mode::wayland);
+            shell_component_pids.insert(launcher.run_app(std::string{i, j}, egmde::Launcher::Mode::wayland));
             if ((i = j) != end(apps)) ++i;
         }
     };
+
+    // Protocols we're reserving for shell components
+    std::set<std::string> const shell_protocols{
+        WaylandExtensions::zwlr_layer_shell_v1, WaylandExtensions::zxdg_output_manager_v1};
+
+
+    WaylandExtensions extensions;
+
+    for (auto const& protocol : shell_protocols)
+    {
+        extensions.enable(protocol);
+    }
+
+    extensions.set_filter([&](Application const& app, char const* protocol)
+        {
+            if (shell_protocols.find(protocol) == end(shell_protocols))
+                return true;
+
+            return shell_component_pids.find(pid_of(app)) != end(shell_component_pids);
+        });
 
     auto const terminal_cmd = std::string{argv[0]} + "-terminal";
 
@@ -74,7 +96,7 @@ int main(int argc, char const* argv[])
     return runner.run_with(
         {
             X11Support{},
-            WaylandExtensions{},
+            extensions,
             display_configuration_options,
             CommandLineOption{[&](auto& option) { wallpaper.top(option);},
                               "wallpaper-top",    "Colour of wallpaper RGB", "0x000000"},

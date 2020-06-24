@@ -47,7 +47,7 @@ public:
     void stop();
 
     enum class Mode { wayland, x11, wayland_debug, x11_debug};
-    void run_app(std::string app, Mode mode) const;
+    auto run_app(std::string app, Mode mode) const -> pid_t;
 
     auto session() const -> std::shared_ptr<mir::scene::Session>
     {

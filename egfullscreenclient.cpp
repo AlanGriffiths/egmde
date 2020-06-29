@@ -416,6 +416,8 @@ void egmde::FullscreenClient::run(wl_display* display)
 
         if (fds[roundtrip].revents & (POLLIN | POLLERR))
         {
+            eventfd_t foo;
+            eventfd_read(roundtrip_signal, &foo);
             wl_display_roundtrip(display);
         }
     }

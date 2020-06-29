@@ -133,6 +133,7 @@ void egmde::FullscreenClient::Output::done(void* data, struct wl_output* /*wl_ou
 }
 
 egmde::FullscreenClient::FullscreenClient(wl_display* display) :
+    roundtrip_signal{::eventfd(0, EFD_SEMAPHORE)},
     shutdown_signal{::eventfd(0, EFD_CLOEXEC)},
     keyboard_context_{xkb_context_new(XKB_CONTEXT_NO_FLAGS)},
     registry{nullptr, [](auto){}}
@@ -373,6 +374,7 @@ void egmde::FullscreenClient::run(wl_display* display)
 {
     enum FdIndices {
         display_fd = 0,
+        roundtrip,
         shutdown,
         indices
     };
@@ -380,6 +382,7 @@ void egmde::FullscreenClient::run(wl_display* display)
     pollfd fds[indices] =
         {
             {wl_display_get_fd(display), POLLIN, 0},
+            {roundtrip_signal, POLLIN, 0},
             {shutdown_signal, POLLIN, 0},
         };
 
@@ -410,6 +413,11 @@ void egmde::FullscreenClient::run(wl_display* display)
         {
             wl_display_cancel_read(display);
         }
+
+        if (fds[roundtrip].revents & (POLLIN | POLLERR))
+        {
+            wl_display_roundtrip(display);
+        }
     }
 }
 
@@ -430,7 +438,13 @@ void egmde::FullscreenClient::for_each_surface(std::function<void(SurfaceInfo&)>
             f(const_cast<SurfaceInfo&>(os.second));
         }
     }
-    wl_display_roundtrip(display);
+
+    roundtrip();
+}
+
+void egmde::FullscreenClient::roundtrip() const
+{
+    eventfd_write(roundtrip_signal, 1);
 }
 
 void egmde::FullscreenClient::keyboard_keymap(wl_keyboard* /*keyboard*/, uint32_t /*format*/, int32_t fd, uint32_t size)

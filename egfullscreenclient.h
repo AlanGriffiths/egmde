@@ -201,6 +201,10 @@ private:
 
     void on_output_gone(Output const*);
 
+    // Sync with the server (on a safe thread)
+    void roundtrip() const;
+
+    mir::Fd const roundtrip_signal;
     mir::Fd const shutdown_signal;
 
     std::mutex mutable outputs_mutex;

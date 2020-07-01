@@ -29,6 +29,7 @@ namespace egmde
 using namespace miral;
 class Wallpaper;
 class ShellCommands;
+class Launcher;
 
 class WindowManagerPolicy :
     public MinimalWindowManager
@@ -54,11 +55,15 @@ private:
     auto place_new_window(ApplicationInfo const& app_info, WindowSpecification const& request_parameters)
     -> WindowSpecification override;
 
-    void advise_new_window(const WindowInfo &window_info) override;
+    void advise_new_app(ApplicationInfo& application) override;
+
+    void advise_new_window(WindowInfo const& window_info) override;
 
     void advise_delete_app(ApplicationInfo const& application) override;
 
-    void advise_delete_window(const WindowInfo &window_info) override;
+    void handle_window_ready(WindowInfo& window_info) override;
+
+    void advise_delete_window(WindowInfo const& window_info) override;
 
     void handle_modify_window(WindowInfo& window_info, WindowSpecification const& modifications) override;
 
@@ -72,6 +77,7 @@ private:
     void change_active_workspace(std::shared_ptr<Workspace> const& ww,
                                  std::shared_ptr<Workspace> const& old_active,
                                  miral::Window const& window);
+    void start_launcher() const;
 
     bool external_wallpaper = false;
     Wallpaper* const wallpaper;
@@ -81,8 +87,8 @@ private:
     ring_buffer workspaces;
     ring_buffer::iterator active_workspace;
 
-private:
     std::map<std::shared_ptr<miral::Workspace>, miral::Window> workspace_to_active;
+    int apps = 0;
 };
 }
 

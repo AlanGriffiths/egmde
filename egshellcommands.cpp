@@ -63,6 +63,12 @@ void egmde::ShellCommands::del_shell_app(miral::Application const& app)
     shell_apps.erase(app);
 }
 
+void egmde::ShellCommands::start_launcher()
+{
+    add_shell_app(launcher.session());
+    launcher.show();
+}
+
 auto egmde::ShellCommands::keyboard_shortcuts(MirKeyboardEvent const* kev) -> bool
 {
     if (mir_keyboard_event_action(kev) == mir_keyboard_action_up)
@@ -85,15 +91,6 @@ auto egmde::ShellCommands::keyboard_shortcuts(MirKeyboardEvent const* kev) -> bo
 
     switch (key_code)
     {
-    case XKB_KEY_A:
-    case XKB_KEY_a:
-        if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
-            return false;
-
-        add_shell_app(launcher.session());
-        launcher.show();
-        return true;
-
     case XKB_KEY_BackSpace:
         if (mir_keyboard_event_action(kev) == mir_keyboard_action_down)
         {
@@ -104,56 +101,6 @@ auto egmde::ShellCommands::keyboard_shortcuts(MirKeyboardEvent const* kev) -> bo
             }
         }
         runner.stop();
-        return true;
-
-    case XKB_KEY_T:
-    case XKB_KEY_t:
-        if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
-            return false;
-        launcher.run_app(terminal_cmd, egmde::Launcher::Mode::wayland);
-        return true;
-
-    case XKB_KEY_X:
-    case XKB_KEY_x:
-        if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
-            return false;
-        launcher.run_app(terminal_cmd, egmde::Launcher::Mode::x11);
-        return true;
-
-    case XKB_KEY_Left:
-        wm->dock_active_window_left();
-        return true;
-
-    case XKB_KEY_Right:
-        wm->dock_active_window_right();
-        return true;
-
-    case XKB_KEY_space:
-        wm->toggle_maximized_restored();
-        return true;
-
-    case XKB_KEY_Up:
-        wm->workspace_up(mods & mir_input_event_modifier_shift);
-        return true;
-
-    case XKB_KEY_Down:
-        wm->workspace_down(mods & mir_input_event_modifier_shift);
-        return true;
-
-    case XKB_KEY_bracketright:
-        wm->focus_next_application();
-        return true;
-
-    case XKB_KEY_bracketleft:
-        wm->focus_prev_application();
-        return true;
-
-    case XKB_KEY_braceright:
-        wm->focus_next_within_application();
-        return true;
-
-    case XKB_KEY_braceleft:
-        wm->focus_prev_within_application();
         return true;
 
     default:
@@ -179,7 +126,7 @@ auto egmde::ShellCommands::touch_shortcuts(MirTouchEvent const* tev) -> bool
     if (mir_touch_event_axis_value(tev, 0, mir_touch_axis_x) >= 5)
         return false;
 
-    launcher.show();
+    start_launcher();
     in_touch_gesture = true;
     return true;
 }

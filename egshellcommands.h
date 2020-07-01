@@ -60,6 +60,8 @@ public:
     auto shell_keyboard_enabled() const -> bool
         { return shell_commands_active; }
 
+    void start_launcher();
+
 private:
     auto keyboard_shortcuts(MirKeyboardEvent const* kev) -> bool;
     auto touch_shortcuts(MirTouchEvent const* tev) -> bool;

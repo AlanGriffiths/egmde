@@ -605,23 +605,6 @@ void egmde::Launcher::Self::keyboard_key(wl_keyboard* /*keyboard*/, uint32_t /*s
             run_app();
             break;
 
-        case XKB_KEY_BackSpace:
-            run_app(Mode::x11);
-            break;
-
-        case XKB_KEY_F11:
-            run_app(Mode::wayland_debug);
-            break;
-
-        case XKB_KEY_F12:
-            run_app(Mode::x11_debug);
-            break;
-
-        case XKB_KEY_Escape:
-            running = false;
-            for_each_surface([this](auto& info) { this->draw_screen(info); });
-            break;
-
         default:
         {
             uint32_t utf32 = xkb_keysym_to_utf32(keysym);
@@ -835,11 +818,6 @@ void egmde::Launcher::Self::show_screen(SurfaceInfo& info) const
 
     static Printer printer;
     printer.print(width, height, content_area, {prev->title,  current_app->title, next->title});
-    auto const help =
-        "<Enter> = start app | "
-        "<BkSp> = start using X11 | "
-        "Arrows (or initial letter) = change app | <Esc> = cancel";
-    printer.footer(width, height, content_area, {help, "", ""});
 
     wl_surface_attach(info.surface, info.buffer, 0, 0);
     wl_surface_set_buffer_scale(info.surface, info.output->scale_factor);

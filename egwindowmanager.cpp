@@ -25,6 +25,8 @@
 #include <miral/window_manager_tools.h>
 #include <miral/zone.h>
 
+#include <thread>
+
 #include <linux/input.h>
 
 using namespace mir::geometry;
@@ -97,9 +99,26 @@ miral::WindowSpecification egmde::WindowManagerPolicy::place_new_window(
     {
         result.type() = mir_window_type_decoration;
     }
+    else if ((result.type() == mir_window_type_normal || result.type() == mir_window_type_freestyle) &&
+             (!result.parent().is_set() || !result.parent().value().lock()))
+    {
+        result.state() = mir_window_state_maximized;
+        result.size() = mir::optional_value<Size>{}; // Ignore requested size (if any) when we maximize
+        tools.place_and_size_for_state(result, WindowInfo{});
+
+        if (!request_parameters.state().is_set() || request_parameters.state().value() != mir_window_state_restored)
+            result.state() = request_parameters.state();
+    }
 
     result.userdata() = std::make_shared<WorkspaceInfo>();
     return result;
+}
+
+void egmde::WindowManagerPolicy::advise_new_app(miral::ApplicationInfo& application)
+{
+    ++apps;
+
+    MinimalWindowManager::advise_new_app(application);
 }
 
 void egmde::WindowManagerPolicy::advise_new_window(const miral::WindowInfo &window_info)
@@ -124,12 +143,17 @@ void egmde::WindowManagerPolicy::advise_new_window(const miral::WindowInfo &wind
 
 void egmde::WindowManagerPolicy::advise_delete_window(const miral::WindowInfo &window_info)
 {
+    start_launcher();
     WindowManagementPolicy::advise_delete_window(window_info);
     commands->advise_delete_window_for(window_info.window().application());
 }
 
 void egmde::WindowManagerPolicy::advise_delete_app(miral::ApplicationInfo const& application)
 {
+    --apps;
+
+    start_launcher();
+
     WindowManagementPolicy::advise_delete_app(application);
 
     commands->del_shell_app(application.application());
@@ -318,7 +342,18 @@ void egmde::WindowManagerPolicy::apply_workspace_visible_to(Window const& window
 
 void egmde::WindowManagerPolicy::handle_modify_window(WindowInfo& window_info, WindowSpecification const& modifications)
 {
-    auto mods = modifications;
+    WindowSpecification mods = modifications;
+
+    if ((window_info.type() == mir_window_type_normal || window_info.type() == mir_window_type_freestyle) &&
+        !window_info.parent())
+    {
+        mods.state() = mir_window_state_maximized;
+        mods.size() = mir::optional_value<Size>{}; // Ignore requested size (if any) when we maximize
+        tools.place_and_size_for_state(mods, window_info);
+
+        if (!modifications.state().is_set() || modifications.state().value() != mir_window_state_restored)
+            mods.state() = modifications.state();
+    }
 
     auto& workspace_info = workspace_info_for(window_info);
 
@@ -332,6 +367,15 @@ void egmde::WindowManagerPolicy::handle_modify_window(WindowInfo& window_info, W
     }
 
     MinimalWindowManager::handle_modify_window(window_info, mods);
+}
+
+void egmde::WindowManagerPolicy::start_launcher() const
+{
+    // If we only have the wallpaper and launcher, time to show the launcher!
+    if (apps == 2)
+    {
+        std::thread([this] { this->commands->start_launcher(); }).detach();
+    }
 }
 
 void egmde::WindowManagerPolicy::change_active_workspace(
@@ -425,23 +469,12 @@ bool egmde::WindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* e
     return commands->shell_keyboard_enabled() && MinimalWindowManager::handle_keyboard_event(event);
 }
 
-void egmde::WindowManagerPolicy::focus_next_application()
+void egmde::WindowManagerPolicy::handle_window_ready(miral::WindowInfo& window_info)
 {
-    tools.invoke_under_lock([this] { tools.focus_next_application(); });
-}
+    MinimalWindowManager::handle_window_ready(window_info);
 
-void egmde::WindowManagerPolicy::focus_prev_application()
-{
-    tools.invoke_under_lock([this] { tools.focus_prev_application(); });
+    if (window_info.window().application() == wallpaper->session())
+    {
+        start_launcher();
+    }
 }
-
-void egmde::WindowManagerPolicy::focus_next_within_application()
-{
-    tools.invoke_under_lock([this] { tools.focus_next_within_application(); });
-}
-
-void egmde::WindowManagerPolicy::focus_prev_within_application()
-{
-    tools.invoke_under_lock([this] { tools.focus_prev_within_application(); });
-}
-

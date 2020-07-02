@@ -28,6 +28,7 @@
 #include <thread>
 
 #include <linux/input.h>
+#include <unistd.h>
 
 using namespace mir::geometry;
 using namespace miral;
@@ -143,7 +144,9 @@ void egmde::WindowManagerPolicy::advise_new_window(const miral::WindowInfo &wind
 
 void egmde::WindowManagerPolicy::advise_delete_window(const miral::WindowInfo &window_info)
 {
-    start_launcher();
+    if (pid_of(window_info.window().application()) != getpid())
+        start_launcher();
+
     WindowManagementPolicy::advise_delete_window(window_info);
     commands->advise_delete_window_for(window_info.window().application());
 }
@@ -371,11 +374,7 @@ void egmde::WindowManagerPolicy::handle_modify_window(WindowInfo& window_info, W
 
 void egmde::WindowManagerPolicy::start_launcher() const
 {
-    // If we only have the wallpaper and launcher, time to show the launcher!
-    if (apps == 2)
-    {
-        std::thread([this] { this->commands->start_launcher(); }).detach();
-    }
+    std::thread([this] { this->commands->start_launcher(); }).detach();
 }
 
 void egmde::WindowManagerPolicy::change_active_workspace(

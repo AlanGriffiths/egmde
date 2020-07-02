@@ -374,7 +374,8 @@ void egmde::WindowManagerPolicy::handle_modify_window(WindowInfo& window_info, W
 
 void egmde::WindowManagerPolicy::start_launcher() const
 {
-    std::thread([this] { this->commands->start_launcher(); }).detach();
+    using namespace std::chrono_literals;
+    std::thread([this] { std::this_thread::sleep_for(20ms); this->commands->start_launcher(); }).detach();
 }
 
 void egmde::WindowManagerPolicy::change_active_workspace(

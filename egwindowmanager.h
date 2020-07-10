@@ -42,6 +42,7 @@ public:
 
     void dock_active_window_left();
     void dock_active_window_right();
+    void toggle_maximized_restored();
     void workspace_up(bool take_active);
     void workspace_down(bool take_active);
 

@@ -199,6 +199,37 @@ void egmde::WindowManagerPolicy::dock_active_window_left()
         });
 }
 
+
+void egmde::WindowManagerPolicy::toggle_maximized_restored()
+{
+    tools.invoke_under_lock(
+        [this]
+        {
+            if (auto active_window = tools.active_window())
+            {
+                auto& window_info = tools.info_for(active_window);
+                WindowSpecification modifications;
+
+                modifications.state() = (window_info.state() != mir_window_state_restored) ?
+                                        mir_window_state_restored : mir_window_state_maximized;
+
+                if (window_info.state() != mir_window_state_restored)
+                {
+                    modifications.state() = mir_window_state_restored;
+                    modifications.size() = window_info.restore_rect().size;
+                    modifications.top_left() = window_info.restore_rect().top_left;
+                }
+                else
+                {
+                    modifications.state() = mir_window_state_maximized;
+                }
+
+                tools.place_and_size_for_state(modifications, window_info);
+                tools.modify_window(window_info, modifications);
+            }
+        });
+}
+
 void egmde::WindowManagerPolicy::dock_active_window_right()
 {
     tools.invoke_under_lock(

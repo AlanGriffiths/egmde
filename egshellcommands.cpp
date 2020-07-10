@@ -125,6 +125,10 @@ auto egmde::ShellCommands::keyboard_shortcuts(MirKeyboardEvent const* kev) -> bo
         wm->dock_active_window_right();
         return true;
 
+    case KEY_SPACE:
+        wm->toggle_maximized_restored();
+        return true;
+
     case KEY_UP:
         wm->workspace_up(mods & mir_input_event_modifier_shift);
         return true;

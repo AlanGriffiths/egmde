@@ -314,8 +314,14 @@ void egmde::WindowManagerPolicy::handle_modify_window(WindowInfo& window_info, W
 
     auto& workspace_info = workspace_info_for(window_info);
 
-    if (workspace_info.in_hidden_workspace && mods.state().is_set())
-        mods.state().consume();
+    if (workspace_info.in_hidden_workspace)
+    {
+        // Don't allow state changes in hidden workspaces
+        if (mods.state().is_set()) mods.state().consume();
+
+        // Don't allow size changes in hidden workspaces
+        if (mods.size().is_set()) mods.size().consume();
+    }
 
     MinimalWindowManager::handle_modify_window(window_info, mods);
 }

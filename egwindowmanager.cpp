@@ -315,7 +315,7 @@ void egmde::WindowManagerPolicy::handle_modify_window(WindowInfo& window_info, W
     auto& workspace_info = workspace_info_for(window_info);
 
     if (workspace_info.in_hidden_workspace && mods.state().is_set())
-        workspace_info.old_state = mods.state().consume();
+        mods.state().consume();
 
     MinimalWindowManager::handle_modify_window(window_info, mods);
 }

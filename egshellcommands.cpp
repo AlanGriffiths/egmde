@@ -22,7 +22,7 @@
 
 #include <miral/runner.h>
 
-#include <linux/input.h>
+#include <xkbcommon/xkbcommon-keysyms.h>
 
 egmde::ShellCommands::ShellCommands(MirRunner& runner, Launcher& launcher, std::string const& terminal_cmd) :
     runner{runner}, launcher{launcher}, terminal_cmd{terminal_cmd}
@@ -72,9 +72,9 @@ auto egmde::ShellCommands::keyboard_shortcuts(MirKeyboardEvent const* kev) -> bo
     if (!(mods & mir_input_event_modifier_alt) || !(mods & mir_input_event_modifier_ctrl))
         return false;
 
-    auto const scan_code = mir_keyboard_event_scan_code(kev);
+    auto const key_code = mir_keyboard_event_key_code(kev);
 
-    if (scan_code == KEY_DELETE && mir_keyboard_event_action(kev) == mir_keyboard_action_down)
+    if (key_code == XKB_KEY_Delete && mir_keyboard_event_action(kev) == mir_keyboard_action_down)
     {
         shell_commands_active = !shell_commands_active;
         return true;
@@ -83,9 +83,10 @@ auto egmde::ShellCommands::keyboard_shortcuts(MirKeyboardEvent const* kev) -> bo
     if (!shell_commands_active)
         return false;
 
-    switch (scan_code)
+    switch (key_code)
     {
-    case KEY_A:
+    case XKB_KEY_A:
+    case XKB_KEY_a:
         if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
             return false;
 
@@ -93,7 +94,7 @@ auto egmde::ShellCommands::keyboard_shortcuts(MirKeyboardEvent const* kev) -> bo
         launcher.show();
         return true;
 
-    case KEY_BACKSPACE:
+    case XKB_KEY_BackSpace:
         if (mir_keyboard_event_action(kev) == mir_keyboard_action_down)
         {
             std::lock_guard<decltype(mutex)> lock{mutex};
@@ -105,35 +106,37 @@ auto egmde::ShellCommands::keyboard_shortcuts(MirKeyboardEvent const* kev) -> bo
         runner.stop();
         return true;
 
-    case KEY_T:
+    case XKB_KEY_T:
+    case XKB_KEY_t:
         if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
             return false;
         launcher.run_app(terminal_cmd, egmde::Launcher::Mode::wayland);
         return true;
 
-    case KEY_X:
+    case XKB_KEY_X:
+    case XKB_KEY_x:
         if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
             return false;
         launcher.run_app(terminal_cmd, egmde::Launcher::Mode::x11);
         return true;
 
-    case KEY_LEFT:
+    case XKB_KEY_Left:
         wm->dock_active_window_left();
         return true;
 
-    case KEY_RIGHT:
+    case XKB_KEY_Right:
         wm->dock_active_window_right();
         return true;
 
-    case KEY_SPACE:
+    case XKB_KEY_space:
         wm->toggle_maximized_restored();
         return true;
 
-    case KEY_UP:
+    case XKB_KEY_Up:
         wm->workspace_up(mods & mir_input_event_modifier_shift);
         return true;
 
-    case KEY_DOWN:
+    case XKB_KEY_Down:
         wm->workspace_down(mods & mir_input_event_modifier_shift);
         return true;
 

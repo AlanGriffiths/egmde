@@ -45,7 +45,9 @@ void render_gradient(int32_t width, int32_t height, unsigned char* row_, uint8_t
 
     static egmde::Printer printer;
 
-    printer.footer(width, height, row_, {"Ctrl-Alt-A = app launcher | Ctrl-Alt-T = terminal | Ctrl-Alt-BkSp = quit"});
+    printer.footer(width, height, row_,
+                   {"Ctrl-Alt-? commands: Space = restore/maximise | Left/Right = dock left/right",
+                          "A = app launcher | T = terminal | Up/Down = change workspace | BkSp = quit"});
 }
 }
 

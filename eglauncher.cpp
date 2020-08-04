@@ -748,7 +748,7 @@ void egmde::Launcher::Self::show_screen(SurfaceInfo& info) const
         "<Enter> = start app | "
         "<BkSp> = start using X11 | "
         "Arrows (or initial letter) = change app | <Esc> = cancel";
-    printer.footer(width, height, content_area, {help, ""});
+    printer.footer(width, height, content_area, {help, "", ""});
 
     wl_surface_attach(info.surface, info.buffer, 0, 0);
     wl_surface_commit(info.surface);

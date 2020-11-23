@@ -31,33 +31,34 @@ add_library(egmde-wayland STATIC
 
 target_include_directories(egmde-wayland PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS} ${MIRWAYLAND_INCLUDE_DIRS})
 
-enable_testing()
-pkg_check_modules(MIRTEST mirtest REQUIRED)
-pkg_get_variable(WLCS_BINARY wlcs test_runner)
-
-add_library(egmde-wlcs MODULE
-  wlcs_fixture.cpp)
-
-target_include_directories(egmde-wlcs
-  PUBLIC SYSTEM ${MIRTEST_INCLUDE_DIRS})
-
-target_link_libraries(egmde-wlcs
-  egmde-wayland
-  ${MIRTEST_LIBRARIES}
-  ${MIRWAYLAND_LDFLAGS}
-  ${WAYLAND_CLIENT_LDFLAGS}
-  ${WAYLAND_SERVER_LDFLAGS}
-)
-
-set_target_properties(egmde-wlcs
-  PROPERTIES
-  PREFIX ""
-)
-
-add_test(
-  NAME wlcs
-  COMMAND ${WLCS_BINARY} ${GTEST_FILTER} ${CMAKE_BINARY_DIR}/egmde-wlcs.so
-)
+# TODO restore wlcs tests when mirtest-dev exists again
+#enable_testing()
+#pkg_check_modules(MIRTEST mirtest REQUIRED)
+#pkg_get_variable(WLCS_BINARY wlcs test_runner)
+#
+#add_library(egmde-wlcs MODULE
+#  wlcs_fixture.cpp)
+#
+#target_include_directories(egmde-wlcs
+#  PUBLIC SYSTEM ${MIRTEST_INCLUDE_DIRS})
+#
+#target_link_libraries(egmde-wlcs
+#  egmde-wayland
+#  ${MIRTEST_LIBRARIES}
+#  ${MIRWAYLAND_LDFLAGS}
+#  ${WAYLAND_CLIENT_LDFLAGS}
+#  ${WAYLAND_SERVER_LDFLAGS}
+#)
+#
+#set_target_properties(egmde-wlcs
+#  PROPERTIES
+#  PREFIX ""
+#)
+#
+#add_test(
+#  NAME wlcs
+#  COMMAND ${WLCS_BINARY} ${GTEST_FILTER} ${CMAKE_BINARY_DIR}/egmde-wlcs.so
+#)
 
 add_executable(egmde
     egmde.cpp

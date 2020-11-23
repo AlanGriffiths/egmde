@@ -183,7 +183,7 @@ void egmde::FullscreenClient::on_output_changed(Output const* output)
             hidden_outputs.erase(i);
         }
     }
-    wl_display_roundtrip(display);
+    wl_display_flush(display);
 }
 
 void egmde::FullscreenClient::on_output_gone(Output const* output)
@@ -233,7 +233,7 @@ void egmde::FullscreenClient::on_output_gone(Output const* output)
             hidden_outputs.erase(i);
         }
     }
-    wl_display_roundtrip(display);
+    wl_display_flush(display);
 }
 
 void egmde::FullscreenClient::on_new_output(Output const* output)
@@ -255,7 +255,7 @@ void egmde::FullscreenClient::on_new_output(Output const* output)
             hidden_outputs.emplace_back(output);
         }
     }
-    wl_display_roundtrip(display);
+    wl_display_flush(display);
 }
 
 auto egmde::FullscreenClient::make_shm_pool(size_t size, void** data) const

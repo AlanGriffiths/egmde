@@ -14,6 +14,52 @@ pkg_check_modules(WAYLAND_CLIENT REQUIRED wayland-client)
 pkg_check_modules(XKBCOMMON xkbcommon REQUIRED)
 find_package(Boost COMPONENTS filesystem REQUIRED)
 
+pkg_check_modules(MIRWAYLAND mirwayland REQUIRED)
+pkg_check_modules(WAYLAND_SERVER REQUIRED wayland-server)
+
+add_subdirectory(wayland-generated)
+
+add_library(egmde-wayland STATIC
+    wayland-generated/primary-selection-unstable-v1_wrapper.cpp
+    wayland-generated/primary-selection-unstable-v1_wrapper.h
+    wayland-generated/gtk-primary-selection_wrapper.cpp
+    wayland-generated/gtk-primary-selection_wrapper.h
+    egprimary_selection_device_controller.cpp egprimary_selection_device_controller.h
+    primary_selection.cpp primary_selection.h
+    gtk_primary_selection.cpp gtk_primary_selection.h
+)
+
+target_include_directories(egmde-wayland PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS} ${MIRWAYLAND_INCLUDE_DIRS})
+
+# TODO restore wlcs tests when mirtest-dev exists again
+#enable_testing()
+#pkg_check_modules(MIRTEST mirtest REQUIRED)
+#pkg_get_variable(WLCS_BINARY wlcs test_runner)
+#
+#add_library(egmde-wlcs MODULE
+#  wlcs_fixture.cpp)
+#
+#target_include_directories(egmde-wlcs
+#  PUBLIC SYSTEM ${MIRTEST_INCLUDE_DIRS})
+#
+#target_link_libraries(egmde-wlcs
+#  egmde-wayland
+#  ${MIRTEST_LIBRARIES}
+#  ${MIRWAYLAND_LDFLAGS}
+#  ${WAYLAND_CLIENT_LDFLAGS}
+#  ${WAYLAND_SERVER_LDFLAGS}
+#)
+#
+#set_target_properties(egmde-wlcs
+#  PROPERTIES
+#  PREFIX ""
+#)
+#
+#add_test(
+#  NAME wlcs
+#  COMMAND ${WLCS_BINARY} ${GTEST_FILTER} ${CMAKE_BINARY_DIR}/egmde-wlcs.so
+#)
+
 add_executable(egmde
     egmde.cpp
     eglauncher.cpp eglauncher.h
@@ -23,6 +69,13 @@ add_executable(egmde
     printer.cpp printer.h
     egfullscreenclient.cpp egfullscreenclient.h
     egshellcommands.cpp egshellcommands.h
+    wayland-generated/primary-selection-unstable-v1_wrapper.cpp
+    wayland-generated/primary-selection-unstable-v1_wrapper.h
+    wayland-generated/gtk-primary-selection_wrapper.cpp
+    wayland-generated/gtk-primary-selection_wrapper.h
+    egprimary_selection_device_controller.cpp egprimary_selection_device_controller.h
+    primary_selection.cpp primary_selection.h
+    gtk_primary_selection.cpp gtk_primary_selection.h
 )
 
 execute_process(
@@ -43,9 +96,16 @@ endif()
 set_source_files_properties(egmde.cpp PROPERTIES COMPILE_DEFINITIONS EGMDE_WALLPAPER_BOTTOM="${EGMDE_WALLPAPER_BOTTOM}")
 
 target_include_directories(egmde PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
-target_link_libraries(     egmde               ${MIRAL_LDFLAGS}      ${WAYLAND_CLIENT_LIBRARIES}  ${Boost_LIBRARIES}    ${FREETYPE_LIBRARIES})
-target_link_libraries(     egmde               ${XKBCOMMON_LIBRARIES})
-
+target_link_libraries(egmde
+  egmde-wayland
+  ${MIRAL_LDFLAGS}
+  ${MIRWAYLAND_LDFLAGS}
+  ${WAYLAND_CLIENT_LIBRARIES}
+  ${WAYLAND_SERVER_LDFLAGS}
+  ${Boost_LIBRARIES}
+  ${FREETYPE_LIBRARIES}
+  ${XKBCOMMON_LIBRARIES}
+)
 
 add_custom_target(egmde-launch ALL
     cp ${CMAKE_CURRENT_SOURCE_DIR}/egmde-launch.sh ${CMAKE_BINARY_DIR}/egmde-launch

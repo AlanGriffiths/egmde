@@ -20,6 +20,8 @@
 #include "egwindowmanager.h"
 #include "egshellcommands.h"
 #include "eglauncher.h"
+#include "primary_selection.h"
+#include "gtk_primary_selection.h"
 
 #include <miral/append_event_filter.h>
 #include <miral/command_line_option.h>
@@ -87,6 +89,9 @@ int main(int argc, char const* argv[])
 
     runner.add_stop_callback([&] { wallpaper.stop(); });
     runner.add_stop_callback([&] { launcher.stop(); });
+
+    extensions.add_extension(egmde::primary_selection_extension());
+    extensions.add_extension(egmde::gtk_primary_selection_extension());
 
     int no_of_workspaces = 1;
     auto const update_workspaces = [&](int option)

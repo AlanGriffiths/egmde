@@ -61,7 +61,9 @@ int main(int argc, char const* argv[])
 
     // Protocols we're reserving for shell components
     std::set<std::string> const shell_protocols{
-        WaylandExtensions::zwlr_layer_shell_v1, WaylandExtensions::zxdg_output_manager_v1};
+        WaylandExtensions::zwlr_layer_shell_v1,
+        WaylandExtensions::zxdg_output_manager_v1,
+        WaylandExtensions::zwlr_foreign_toplevel_manager_v1};
 
 
     WaylandExtensions extensions;

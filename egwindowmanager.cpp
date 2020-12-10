@@ -60,7 +60,7 @@ inline bool is_application(MirDepthLayer layer)
 
 egmde::WindowManagerPolicy::WindowManagerPolicy(
     WindowManagerTools const& tools,
-    Wallpaper const& wallpaper,
+    Wallpaper& wallpaper,
     ShellCommands& commands,
     int const& no_of_workspaces) :
     MinimalWindowManager{tools},
@@ -79,6 +79,9 @@ miral::WindowSpecification egmde::WindowManagerPolicy::place_new_window(
     miral::ApplicationInfo const& app_info, miral::WindowSpecification const& request_parameters)
 {
     auto result = MinimalWindowManager::place_new_window(app_info, request_parameters);
+
+    if (request_parameters.depth_layer() == mir_depth_layer_background)
+        wallpaper->stop();
 
     if (app_info.application() == wallpaper->session())
     {

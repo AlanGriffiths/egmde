@@ -36,7 +36,7 @@ class WindowManagerPolicy :
 public:
     WindowManagerPolicy(
         WindowManagerTools const& tools,
-        Wallpaper const& wallpaper,
+        Wallpaper& wallpaper,
         ShellCommands& commands,
         int const& no_of_workspaces);
 
@@ -69,7 +69,7 @@ private:
                                  std::shared_ptr<Workspace> const& old_active,
                                  miral::Window const& window);
 
-    Wallpaper const* const wallpaper;
+    Wallpaper* const wallpaper;
     ShellCommands* const commands;
 
     using ring_buffer = std::vector<std::shared_ptr<Workspace>>;

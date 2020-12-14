@@ -69,6 +69,7 @@ private:
                                  std::shared_ptr<Workspace> const& old_active,
                                  miral::Window const& window);
 
+    bool external_wallpaper = false;
     Wallpaper* const wallpaper;
     ShellCommands* const commands;
 

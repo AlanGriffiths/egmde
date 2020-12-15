@@ -586,6 +586,11 @@ auto egmde::Launcher::run_app(std::string app, Mode mode) const -> pid_t
     return ::run_app(external_client_launcher, app, mode);
 }
 
+void egmde::Launcher::autostart_apps() const
+{
+    do_autostart(external_client_launcher);
+}
+
 void egmde::Launcher::Self::start()
 {
     if (!running.exchange(true))
@@ -766,8 +771,6 @@ egmde::Launcher::Self::Self(wl_display* display, ExternalClientLauncher& externa
     FullscreenClient{display},
     external_client_launcher{external_client_launcher}
 {
-    do_autostart(external_client_launcher);
-
     wl_display_roundtrip(display);
     wl_display_roundtrip(display);
 }

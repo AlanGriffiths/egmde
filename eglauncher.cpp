@@ -21,6 +21,7 @@
 #include "printer.h"
 
 #include <miral/version.h>
+#include <mir/log.h>
 #include <linux/input.h>
 #include <xkbcommon/xkbcommon.h>
 
@@ -113,21 +114,6 @@ auto search_paths(char const* search_path) -> file_list
     return paths;
 }
 
-struct app_details
-{
-    std::string desktop_path;
-    std::string desktop_file;
-
-    std::string name;
-    std::string exec;
-    std::string title;
-
-    std::optional<std::string> tryexec;
-    std::optional<std::string> hidden;
-    std::optional<std::string> onlyshowin;
-    std::optional<std::string> notshowin;
-};
-
 auto unescape(std::string const& in) -> std::string
 {
     std::string result;
@@ -142,37 +128,25 @@ auto unescape(std::string const& in) -> std::string
     return result;
 }
 
-auto load_details(file_list desktop_listing) -> std::vector<app_details>
+struct app_details
 {
-    static std::string const categories_key{"Categories="};
-    static std::string const name_key{"Name="};
-    static std::string const exec_key{"Exec="};
-    static std::string const icon_key{"Icon="};
-
-    static std::string const tryexec_key{"TryExec="};
-    static std::string const hidden_key{"Hidden="};
-    static std::string const onlyshowin_key{"OnlyShowIn="};
-    static std::string const notshowin_key{"NotShowIn="};
-
-    std::vector<app_details> details;
-
-    for (auto const& desktop : desktop_listing)
+    app_details(boost::filesystem::path desktop_path)
     {
-        boost::filesystem::ifstream in(desktop);
+        static std::string const categories_key{"Categories="};
+        static std::string const name_key{"Name="};
+        static std::string const exec_key{"Exec="};
+        static std::string const icon_key{"Icon="};
+
+        static std::string const tryexec_key{"TryExec="};
+        static std::string const hidden_key{"Hidden="};
+        static std::string const onlyshowin_key{"OnlyShowIn="};
+        static std::string const notshowin_key{"NotShowIn="};
+
+        boost::filesystem::ifstream in(desktop_path);
 
         std::string line;
 
-        std::string desktop_path = desktop.string();
-        std::string desktop_file = desktop.filename().string();
-
-        std::string name;
-        std::string exec;
-        std::string title;
-
-        std::optional<std::string> tryexec;
-        std::optional<std::string> hidden;
-        std::optional<std::string> onlyshowin;
-        std::optional<std::string> notshowin;
+        desktop_file = desktop_path.filename().string();
 
         auto in_desktop_entry = false;
 
@@ -220,17 +194,28 @@ auto load_details(file_list desktop_listing) -> std::vector<app_details>
         if (sp != std::string::npos)
             app.erase(sp, app.size());
 
-        if (!name.empty() && !exec.empty())
-            details.push_back(app_details{
-                desktop_path,
-                desktop_file,
-                name,
-                exec,
-                name,
-                tryexec,
-                hidden,
-                onlyshowin,
-                notshowin});
+        title = name;
+    }
+
+    std::string desktop_file;
+
+    std::string name;
+    std::string exec;
+    std::string title;
+
+    std::optional<std::string> tryexec;
+    std::optional<std::string> hidden;
+    std::optional<std::string> onlyshowin;
+    std::optional<std::string> notshowin;
+};
+
+auto load_details(file_list desktop_listing) -> std::vector<app_details>
+{
+    std::vector<app_details> details;
+
+    for (auto const& desktop_path : desktop_listing)
+    {
+            details.push_back(desktop_path);
     }
 
     std::sort(begin(details), end(details),
@@ -482,11 +467,11 @@ auto run_app(ExternalClientLauncher& external_client_launcher, std::string app, 
 
 void do_autostart(ExternalClientLauncher& external_client_launcher)
 {
-    auto const autostart_details = load_details(list_autostart_files());
+    auto const desktop_listing = list_autostart_files();
 
     std::set<std::string> encountered_files;
 
-    for (auto const& autostart : autostart_details)
+    for (app_details const& autostart : desktop_listing)
     {
         if (encountered_files.insert(autostart.desktop_file).second == false)
             continue;
@@ -500,7 +485,7 @@ void do_autostart(ExternalClientLauncher& external_client_launcher)
         if (autostart.notshowin && autostart.notshowin->find("egmde") != std::string::npos)
             continue;
 
-        puts(autostart.exec.c_str());
+        mir::log_info("autostarting: '%s'", autostart.exec.c_str());
         run_app(external_client_launcher, autostart.exec, egmde::Launcher::Mode::wayland);
     }
 }

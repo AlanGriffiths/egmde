@@ -9,6 +9,7 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,defs")
 
 include(FindPkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
+pkg_check_modules(MIRCOMMON mircommon REQUIRED)
 pkg_check_modules(FREETYPE freetype2 REQUIRED)
 pkg_check_modules(WAYLAND_CLIENT REQUIRED wayland-client)
 pkg_check_modules(XKBCOMMON xkbcommon REQUIRED)
@@ -42,10 +43,10 @@ endif()
 
 set_source_files_properties(egmde.cpp PROPERTIES COMPILE_DEFINITIONS EGMDE_WALLPAPER_BOTTOM="${EGMDE_WALLPAPER_BOTTOM}")
 
-target_include_directories(egmde PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
-target_link_libraries(     egmde               ${MIRAL_LDFLAGS}      ${WAYLAND_CLIENT_LIBRARIES}  ${Boost_LIBRARIES}    ${FREETYPE_LIBRARIES})
+target_include_directories(egmde PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS} ${MIRCOMMON_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
+target_link_libraries(     egmde               ${MIRAL_LDFLAGS}      ${MIRCOMMON_LDFLAGS}      ${WAYLAND_CLIENT_LIBRARIES}  ${Boost_LIBRARIES}    ${FREETYPE_LIBRARIES})
 target_link_libraries(     egmde               ${XKBCOMMON_LIBRARIES})
-
+set_target_properties(     egmde PROPERTIES COMPILE_DEFINITIONS MIR_LOG_COMPONENT="egmde")
 
 add_custom_target(egmde-launch ALL
     cp ${CMAKE_CURRENT_SOURCE_DIR}/egmde-launch.sh ${CMAKE_BINARY_DIR}/egmde-launch

@@ -55,6 +55,8 @@ public:
         return weak_session.lock();
     }
 
+    void autostart_apps() const;
+
 private:
     miral::ExternalClientLauncher& external_client_launcher;
     std::mutex mutable mutex;

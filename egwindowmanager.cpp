@@ -81,11 +81,16 @@ miral::WindowSpecification egmde::WindowManagerPolicy::place_new_window(
     auto result = MinimalWindowManager::place_new_window(app_info, request_parameters);
 
     if (request_parameters.depth_layer() == mir_depth_layer_background)
+    {
+        external_wallpaper = true;
         wallpaper->stop();
+    }
 
     if (app_info.application() == wallpaper->session())
     {
         result.depth_layer() = mir_depth_layer_background;
+        if (external_wallpaper)
+            wallpaper->stop();
     }
 
     if (result.depth_layer() && !is_application(result.depth_layer().value()))

@@ -107,6 +107,8 @@ int main(int argc, char const* argv[])
             pre_init(CommandLineOption{update_workspaces,
                               "no-of-workspaces", "Number of workspaces [1..32]", no_of_workspaces}),
             CommandLineOption{run_apps, "shell-components", "Colon separated shell components to launch on startup", ""},
+            CommandLineOption{[&](bool autostart){ if (autostart) launcher.autostart_apps(); },
+                              "shell-enable-autostart", "Autostart apps during startup"},
             StartupInternalClient{std::ref(wallpaper)},
             external_client_launcher,
             StartupInternalClient{std::ref(launcher)},

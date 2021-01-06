@@ -32,6 +32,7 @@
 #include <miral/wayland_extensions.h>
 #include <miral/x11_support.h>
 #include <mir/fatal.h>
+#include <mir/log.h>
 
 #include <boost/filesystem.hpp>
 #include <linux/input.h>
@@ -65,12 +66,27 @@ int main(int argc, char const* argv[])
         WaylandExtensions::zxdg_output_manager_v1,
         WaylandExtensions::zwlr_foreign_toplevel_manager_v1};
 
+    // Protocols that are "experimental" in Mir but we want to allow
+    auto const experimental_protocols = {"zwp_pointer_constraints_v1", "zwp_relative_pointer_manager_v1"};
 
     WaylandExtensions extensions;
+    auto const supported_protocols = extensions.supported();
 
     for (auto const& protocol : shell_protocols)
     {
         extensions.enable(protocol);
+    }
+
+    for (auto const& protocol : experimental_protocols)
+    {
+        if (supported_protocols.find(protocol) != end(supported_protocols))
+        {
+            extensions.enable(protocol);
+        }
+        else
+        {
+            mir::log_debug("This version of Mir doesn't support the Wayland extension %s", protocol);
+        }
     }
 
     extensions.set_filter([&](Application const& app, char const* protocol)

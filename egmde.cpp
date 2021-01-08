@@ -36,6 +36,7 @@
 
 #include <boost/filesystem.hpp>
 #include <linux/input.h>
+#include <csignal>
 
 using namespace miral;
 
@@ -101,6 +102,7 @@ int main(int argc, char const* argv[])
 
     egmde::ShellCommands commands{runner, launcher, terminal_cmd};
 
+    runner.add_stop_callback([&] { for (auto const pid : shell_component_pids) kill(pid, SIGTERM); });
     runner.add_stop_callback([&] { wallpaper.stop(); });
     runner.add_stop_callback([&] { launcher.stop(); });
 

@@ -141,6 +141,7 @@ struct app_details
         static std::string const hidden_key{"Hidden="};
         static std::string const onlyshowin_key{"OnlyShowIn="};
         static std::string const notshowin_key{"NotShowIn="};
+        static std::string const terminal_key{"Terminal="};
 
         boost::filesystem::ifstream in(desktop_path);
 
@@ -174,25 +175,10 @@ struct app_details
                     tryexec = line.substr(tryexec_key.length());
                 else if (line.find(notshowin_key) == 0)
                     notshowin = line.substr(notshowin_key.length());
+                else if (line.find(terminal_key) == 0)
+                    terminal = line.substr(terminal_key.length()) == "true";
             }
         }
-
-        auto app = exec;
-        auto ws = app.find('%');
-        if (ws != std::string::npos)
-        {
-            // TODO handle exec variables:
-            // https://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables
-            app = app.substr(0, ws);    // For now ignore the rest of the Exec value
-        }
-
-        auto sl = app.rfind('/');
-        if (sl != std::string::npos)
-            app.erase(0, sl+1);
-
-        auto sp = app.find(' ');
-        if (sp != std::string::npos)
-            app.erase(sp, app.size());
 
         title = name;
     }
@@ -207,6 +193,7 @@ struct app_details
     std::optional<std::string> hidden;
     std::optional<std::string> onlyshowin;
     std::optional<std::string> notshowin;
+    bool terminal = false;
 };
 
 auto load_details(file_list desktop_listing) -> std::vector<app_details>
@@ -493,7 +480,7 @@ void do_autostart(ExternalClientLauncher& external_client_launcher)
 
 struct egmde::Launcher::Self : egmde::FullscreenClient
 {
-    Self(wl_display* display, ExternalClientLauncher& external_client_launcher);
+    Self(wl_display* display, ExternalClientLauncher& external_client_launcher, std::string const& terminal_cmd);
 
     void draw_screen(SurfaceInfo& info) const override;
     void show_screen(SurfaceInfo& info) const;
@@ -520,6 +507,7 @@ private:
 private:
 
     ExternalClientLauncher& external_client_launcher;
+    std::string const terminal_cmd;
 
     int pointer_y = 0;
     int height = 0;
@@ -532,8 +520,9 @@ private:
     std::atomic<Output const*> mutable showing{nullptr};
 };
 
-egmde::Launcher::Launcher(miral::ExternalClientLauncher& external_client_launcher) :
-    external_client_launcher{external_client_launcher}
+egmde::Launcher::Launcher(miral::ExternalClientLauncher& external_client_launcher, std::string const& terminal_cmd) :
+    external_client_launcher{external_client_launcher},
+    terminal_cmd{terminal_cmd}
 {
 }
 
@@ -557,7 +546,7 @@ void egmde::Launcher::show()
 
 void egmde::Launcher::operator()(wl_display* display)
 {
-    auto client = std::make_shared<Self>(display, external_client_launcher);
+    auto client = std::make_shared<Self>(display, external_client_launcher, terminal_cmd);
     self = client;
     client->run(display);
 
@@ -726,7 +715,7 @@ void egmde::Launcher::Self::touch_down(
 
 void egmde::Launcher::Self::run_app(Mode mode)
 {
-    auto app = current_app->exec;
+    auto app = current_app->terminal ? terminal_cmd + " -e " + current_app->exec : current_app->exec;
 
     ::run_app(external_client_launcher, app, mode);
 
@@ -752,9 +741,10 @@ void egmde::Launcher::Self::prev_app()
     for_each_surface([this](auto& info) { this->draw_screen(info); });
 }
 
-egmde::Launcher::Self::Self(wl_display* display, ExternalClientLauncher& external_client_launcher) :
+egmde::Launcher::Self::Self(wl_display* display, ExternalClientLauncher& external_client_launcher, std::string const& terminal_cmd) :
     FullscreenClient{display},
-    external_client_launcher{external_client_launcher}
+    external_client_launcher{external_client_launcher},
+    terminal_cmd{terminal_cmd}
 {
     wl_display_roundtrip(display);
     wl_display_roundtrip(display);

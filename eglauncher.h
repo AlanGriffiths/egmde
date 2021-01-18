@@ -32,7 +32,7 @@ namespace egmde
 class Launcher
 {
 public:
-    Launcher(miral::ExternalClientLauncher& external_client_launcher);
+    Launcher(miral::ExternalClientLauncher& external_client_launcher, std::string const& terminal_cmd);
 
     // These operators are the protocol for an "Internal Client"
     void operator()(wl_display* display);
@@ -61,6 +61,7 @@ private:
     miral::ExternalClientLauncher& external_client_launcher;
     std::mutex mutable mutex;
     std::weak_ptr<mir::scene::Session> weak_session;
+    std::string const terminal_cmd;
 
     struct Self;
     std::weak_ptr<Self> self;

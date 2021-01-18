@@ -50,5 +50,5 @@ else
     fi
   fi
 
-  $terminal --app-id io.mirserver.egmdeTerminal
+  $terminal --app-id io.mirserver.egmdeTerminal "$@"
 fi

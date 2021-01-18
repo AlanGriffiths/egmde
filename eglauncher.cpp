@@ -142,6 +142,7 @@ struct app_details
         static std::string const onlyshowin_key{"OnlyShowIn="};
         static std::string const notshowin_key{"NotShowIn="};
         static std::string const terminal_key{"Terminal="};
+        static std::string const nodisplay_key{"NoDisplay="};
 
         boost::filesystem::ifstream in(desktop_path);
 
@@ -177,6 +178,8 @@ struct app_details
                     notshowin = line.substr(notshowin_key.length());
                 else if (line.find(terminal_key) == 0)
                     terminal = line.substr(terminal_key.length()) == "true";
+                else if (line.find(nodisplay_key) == 0)
+                    nodisplay = line.substr(nodisplay_key.length()) == "true";
             }
         }
 
@@ -194,6 +197,7 @@ struct app_details
     std::optional<std::string> onlyshowin;
     std::optional<std::string> notshowin;
     bool terminal = false;
+    bool nodisplay = false;
 };
 
 auto load_details(file_list desktop_listing) -> std::vector<app_details>
@@ -204,6 +208,12 @@ auto load_details(file_list desktop_listing) -> std::vector<app_details>
     {
             details.push_back(desktop_path);
     }
+
+    details.erase(
+        std::remove_if(begin(details), end(details),
+            [](app_details const& app)
+                { return app.nodisplay; }),
+        end(details));
 
     std::sort(begin(details), end(details),
         [](app_details const& lhs, app_details const& rhs)

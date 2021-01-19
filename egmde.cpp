@@ -42,12 +42,14 @@ using namespace miral;
 
 int main(int argc, char const* argv[])
 {
+    auto const terminal_cmd = std::string{argv[0]} + "-terminal";
+
     MirRunner runner{argc, argv};
 
     egmde::Wallpaper wallpaper;
 
     ExternalClientLauncher external_client_launcher;
-    egmde::Launcher launcher{external_client_launcher};
+    egmde::Launcher launcher{external_client_launcher, terminal_cmd};
 
     std::set<pid_t> shell_component_pids;
 
@@ -97,8 +99,6 @@ int main(int argc, char const* argv[])
 
             return shell_component_pids.find(pid_of(app)) != end(shell_component_pids);
         });
-
-    auto const terminal_cmd = std::string{argv[0]} + "-terminal";
 
     egmde::ShellCommands commands{runner, launcher, terminal_cmd};
 

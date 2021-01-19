@@ -161,7 +161,15 @@ void egmde::FullscreenClient::on_output_changed(Output const* output)
         std::lock_guard<decltype(outputs_mutex)> lock{outputs_mutex};
         auto const p = outputs.find(output);
         if (p != end(outputs))
+        {
+            if (auto& buffer = p->second.buffer)
+            {
+                wl_buffer_destroy(buffer);
+                buffer = nullptr;
+            }
+
             draw_screen(p->second);
+        }
 
         auto i = begin(hidden_outputs);
         while (i != end(hidden_outputs))

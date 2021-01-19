@@ -807,16 +807,14 @@ void egmde::Launcher::Self::show_screen(SurfaceInfo& info) const
             info.output->output);
     }
 
-    if (info.buffer)
+    if (!info.buffer)
     {
-        wl_buffer_destroy(info.buffer);
+        info.buffer = wl_shm_pool_create_buffer(
+            make_shm_pool(stride * height, &info.content_area).get(),
+            0,
+            width, height, stride,
+            WL_SHM_FORMAT_ARGB8888);
     }
-
-    info.buffer = wl_shm_pool_create_buffer(
-        make_shm_pool(stride * height, &info.content_area).get(),
-        0,
-        width, height, stride,
-        WL_SHM_FORMAT_ARGB8888);
 
     static uint8_t const pattern[4] = {0x1f, 0x1f, 0x1f, 0xaf};
 

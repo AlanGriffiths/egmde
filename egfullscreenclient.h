@@ -48,7 +48,7 @@ public:
     void stop();
 
     auto make_shm_pool(size_t size, void** data) const
-    -> std::unique_ptr<wl_shm_pool, void (*)(wl_shm_pool*)>;
+    -> std::unique_ptr<wl_shm_pool, std::function<void(wl_shm_pool*)>>;
 
     wl_display* display = nullptr;
     wl_compositor* compositor = nullptr;

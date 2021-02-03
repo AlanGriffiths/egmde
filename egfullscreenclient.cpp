@@ -267,7 +267,7 @@ void egmde::FullscreenClient::on_new_output(Output const* output)
 }
 
 auto egmde::FullscreenClient::make_shm_pool(size_t size, void** data) const
--> std::unique_ptr<wl_shm_pool, void(*)(wl_shm_pool*)>
+-> std::unique_ptr<wl_shm_pool, std::function<void(wl_shm_pool*)>>
 {
     static auto (*open_shm_file)() -> mir::Fd = []
     {
@@ -306,7 +306,13 @@ auto egmde::FullscreenClient::make_shm_pool(size_t size, void** data) const
         BOOST_THROW_EXCEPTION((std::system_error{errno, std::system_category(), "Failed to mmap buffer"}));
     }
 
-    return {wl_shm_create_pool(shm, fd, size),&wl_shm_pool_destroy};
+    return {
+        wl_shm_create_pool(shm, fd, size),
+        [size](auto* shm)
+        {
+            wl_shm_pool_destroy(shm);
+            munmap(shm, size);
+        }};
 }
 
 egmde::FullscreenClient::~FullscreenClient()

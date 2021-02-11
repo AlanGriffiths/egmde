@@ -105,6 +105,7 @@ void egmde::Wallpaper::Self::draw_screen(SurfaceInfo& info) const
     render_gradient(width, height, static_cast<unsigned char*>(info.content_area), bottom_colour, top_colour);
 
     wl_surface_attach(info.surface, info.buffer, 0, 0);
+    wl_surface_set_buffer_scale(info.surface, info.output->scale_factor);
     wl_surface_commit(info.surface);
 }
 

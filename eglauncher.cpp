@@ -842,6 +842,7 @@ void egmde::Launcher::Self::show_screen(SurfaceInfo& info) const
     printer.footer(width, height, content_area, {help, "", ""});
 
     wl_surface_attach(info.surface, info.buffer, 0, 0);
+    wl_surface_set_buffer_scale(info.surface, info.output->scale_factor);
     wl_surface_commit(info.surface);
 }
 

@@ -78,6 +78,7 @@ public:
         int32_t height;
         int32_t transform;
         wl_output* output;
+        int32_t scale_factor = 1;
     private:
         static void done(void* data, wl_output* output);
 

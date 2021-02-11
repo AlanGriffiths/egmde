@@ -67,11 +67,14 @@ void egmde::FullscreenClient::Output::mode(
     auto output = static_cast<Output*>(data);
 
     output->width = width,
-        output->height = height;
+    output->height = height;
 }
 
-void egmde::FullscreenClient::Output::scale(void* /*data*/, wl_output* /*wl_output*/, int32_t /*factor*/)
+void egmde::FullscreenClient::Output::scale(void* data, wl_output* /*wl_output*/, int32_t factor)
 {
+    auto output = static_cast<Output*>(data);
+
+    output->scale_factor = factor;
 }
 
 egmde::FullscreenClient::Output::Output(

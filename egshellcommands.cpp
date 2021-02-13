@@ -140,6 +140,22 @@ auto egmde::ShellCommands::keyboard_shortcuts(MirKeyboardEvent const* kev) -> bo
         wm->workspace_down(mods & mir_input_event_modifier_shift);
         return true;
 
+    case XKB_KEY_bracketright:
+        wm->focus_next_application();
+        return true;
+
+    case XKB_KEY_bracketleft:
+        wm->focus_prev_application();
+        return true;
+
+    case XKB_KEY_braceright:
+        wm->focus_next_within_application();
+        return true;
+
+    case XKB_KEY_braceleft:
+        wm->focus_prev_within_application();
+        return true;
+
     default:
         return false;
     }

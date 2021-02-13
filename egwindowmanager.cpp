@@ -425,3 +425,23 @@ bool egmde::WindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* e
     return commands->shell_keyboard_enabled() && MinimalWindowManager::handle_keyboard_event(event);
 }
 
+void egmde::WindowManagerPolicy::focus_next_application()
+{
+    tools.invoke_under_lock([this] { tools.focus_next_application(); });
+}
+
+void egmde::WindowManagerPolicy::focus_prev_application()
+{
+    tools.invoke_under_lock([this] { tools.focus_prev_application(); });
+}
+
+void egmde::WindowManagerPolicy::focus_next_within_application()
+{
+    tools.invoke_under_lock([this] { tools.focus_next_within_application(); });
+}
+
+void egmde::WindowManagerPolicy::focus_prev_within_application()
+{
+    tools.invoke_under_lock([this] { tools.focus_prev_within_application(); });
+}
+

@@ -45,6 +45,10 @@ public:
     void toggle_maximized_restored();
     void workspace_up(bool take_active);
     void workspace_down(bool take_active);
+    void focus_next_application();
+    void focus_prev_application();
+    void focus_next_within_application();
+    void focus_prev_within_application();
 
 private:
     auto place_new_window(ApplicationInfo const& app_info, WindowSpecification const& request_parameters)

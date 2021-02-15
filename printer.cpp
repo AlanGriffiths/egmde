@@ -31,12 +31,13 @@ auto default_font() -> char const*
     char const* const fedora_path = "/usr/share/fonts/gnu-free/";
     char const* const fedora_path2= "/usr/share/fonts/liberation-sans/";
     char const* const arch_path   = "/usr/share/fonts/TTF/";
+    char const* const snap_path   = "/snap/egmde/current/usr/share/fonts/truetype/freefont/";
 
     char const* const default_files[] = { "FreeSansBold.ttf", "LiberationSans-Bold.ttf" };
 
     for (auto const default_file : default_files)
     {
-        for (auto const path : { debian_path, fedora_path, fedora_path2, arch_path })
+        for (auto const path : { debian_path, fedora_path, fedora_path2, arch_path, snap_path })
         {
             auto const full_path = std::string{path} + default_file;
             if (access(full_path.c_str(), R_OK) == 0)
@@ -63,7 +64,7 @@ egmde::Printer::Printer()
     if (FT_New_Face(lib, font_file, 0, &face))
     {
         FT_Done_FreeType(lib);
-        throw std::runtime_error{std::string{"WARNING: failed to load titlebar font: \""} +  font_file + "\"\n"
+        throw std::runtime_error{std::string{"WARNING: failed to load font: \""} +  font_file + "\"\n"
             "(Hint: try setting EGMDE_FONT=<path to a font that exists>"};
     }
 }

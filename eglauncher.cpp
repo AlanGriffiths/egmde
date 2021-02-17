@@ -540,8 +540,8 @@ void egmde::Launcher::stop()
 {
     if (auto ss = self.lock())
     {
-        ss->stop();
         std::lock_guard<decltype(mutex)> lock{mutex};
+        ss->stop();
         ss.reset();
     }
 }

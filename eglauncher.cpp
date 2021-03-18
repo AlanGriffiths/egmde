@@ -148,6 +148,7 @@ struct app_details
 
         std::string line;
 
+        desktop_dir = desktop_path.parent_path().string();
         desktop_file = desktop_path.filename().string();
 
         auto in_desktop_entry = false;
@@ -186,6 +187,7 @@ struct app_details
         title = name;
     }
 
+    std::string desktop_dir;
     std::string desktop_file;
 
     std::string name;
@@ -725,7 +727,8 @@ void egmde::Launcher::Self::touch_down(
 
 void egmde::Launcher::Self::run_app(Mode mode)
 {
-    if (getenv("EGMDE_SNAP_LAUNCH"))
+    if (getenv("EGMDE_SNAP_LAUNCH") &&
+        current_app->desktop_dir == "/var/lib/snapd/desktop/applications")
     {
         external_client_launcher.snapcraft_launch(current_app->desktop_file);
     }

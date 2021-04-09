@@ -38,9 +38,9 @@ struct Printer
     void footer(int32_t width, int32_t height, char unsigned* region_address, std::initializer_list<char const*> const& lines);
 
 private:
-    struct Codecvt : std::codecvt_utf8<wchar_t>
+    struct Codecvt : std::codecvt_byname<wchar_t, char, std::mbstate_t>
     {
-        Codecvt() {}
+        Codecvt() : std::codecvt_byname<wchar_t, char, std::mbstate_t>("C") {}
         ~Codecvt() = default;
     };
 

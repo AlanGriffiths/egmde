@@ -158,12 +158,16 @@ void egmde::Wallpaper::top(std::string const& option)
 void egmde::Wallpaper::operator()(wl_display* display)
 {
     auto client = std::make_shared<Self>(display, bottom_colour, top_colour);
-    self = client;
+    {
+        std::lock_guard<decltype(mutex)> lock{mutex};
+        self = client;
+    }
     client->run(display);
 
     // Possibly need to wait for stop() to release the client.
     // (This would be less ugly with a ref-counted wrapper for wl_display* in the miral API)
     std::lock_guard<decltype(mutex)> lock{mutex};
+    client.reset();
 }
 
 void egmde::Wallpaper::operator()(std::weak_ptr<mir::scene::Session> const& session)

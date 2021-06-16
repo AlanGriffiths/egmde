@@ -721,9 +721,6 @@ void egmde::Launcher::Self::run_app(Mode mode)
 
         ::run_app(external_client_launcher, app, mode);
     }
-
-    running = false;
-    for_each_surface([this](auto& info) { this->draw_screen(info); });
 }
 
 void egmde::Launcher::Self::next_app()

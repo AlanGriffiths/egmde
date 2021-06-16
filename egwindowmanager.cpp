@@ -144,9 +144,6 @@ void egmde::WindowManagerPolicy::advise_new_window(const miral::WindowInfo &wind
 
 void egmde::WindowManagerPolicy::advise_delete_window(const miral::WindowInfo &window_info)
 {
-    if (pid_of(window_info.window().application()) != getpid())
-        start_launcher();
-
     WindowManagementPolicy::advise_delete_window(window_info);
     commands->advise_delete_window_for(window_info.window().application());
 }

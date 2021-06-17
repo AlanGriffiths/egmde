@@ -45,7 +45,10 @@ void egmde::ShellCommands::advise_delete_window_for(miral::Application const& ap
 
     if (shell_apps.find(app) == shell_apps.end())
     {
-        --app_windows;
+        if (--app_windows == 0 && shell_apps.find(launcher.session()) != shell_apps.end())
+        {
+            launcher.show();
+        }
     }
 }
 

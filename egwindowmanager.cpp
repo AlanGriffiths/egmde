@@ -348,8 +348,9 @@ void egmde::WindowManagerPolicy::handle_modify_window(WindowInfo& window_info, W
         !window_info.parent())
     {
         mods.state() = mir_window_state_maximized;
-        mods.size() = mir::optional_value<Size>{}; // Ignore requested size (if any) when we maximize
-        tools.place_and_size_for_state(mods, window_info);
+        mods.size() = mir::optional_value<Size>{};      // Ignore requested size (if any) when we maximize
+        mods.top_left() = mir::optional_value<Point>{}; // Ignore requested placement (if any) when we maximize
+        tools.place_and_size_for_state(mods, WindowInfo{});
 
         if (!modifications.state().is_set() || modifications.state().value() != mir_window_state_restored)
             mods.state() = modifications.state();

@@ -219,7 +219,8 @@ auto load_details(file_list desktop_listing) -> std::vector<app_details>
 
     std::sort(begin(details), end(details),
         [](app_details const& lhs, app_details const& rhs)
-            { return lhs.title < rhs.title; });
+            { return lhs.title <  rhs.title ||
+                    (lhs.title == rhs.title && lhs.exec.length() < rhs.exec.length()); });
 
     details.erase(
         std::unique(begin(details), end(details),

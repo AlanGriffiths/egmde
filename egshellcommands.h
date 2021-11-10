@@ -20,20 +20,14 @@
 #define EGMDE_EGSHELLCOMMANDS_H
 
 #include <miral/application.h>
-#include <miral/version.h>
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(3, 0, 0)
 #include <miral/toolkit_event.h>
-
-using namespace miral::toolkit;
-#else
-#include <mir_toolkit/event.h>
-#endif
 
 #include <atomic>
 #include <set>
 #include <string>
 #include <mutex>
 
+using namespace miral::toolkit;
 namespace miral { class MirRunner; }
 namespace egmde
 {

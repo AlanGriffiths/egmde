@@ -20,7 +20,6 @@
 #include "egfullscreenclient.h"
 #include "printer.h"
 
-#include <miral/version.h>
 #include <mir/log.h>
 #include <linux/input.h>
 #include <xkbcommon/xkbcommon.h>

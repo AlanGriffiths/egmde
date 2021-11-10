@@ -20,7 +20,6 @@
 #include "egfullscreenclient.h"
 #include "printer.h"
 
-#include <miral/version.h>
 #include <mir/log.h>
 #include <linux/input.h>
 #include <xkbcommon/xkbcommon.h>
@@ -445,21 +444,11 @@ auto run_app(ExternalClientLauncher& external_client_launcher, std::string app, 
     {
     case egmde::Launcher::Mode::wayland:
     case egmde::Launcher::Mode::wayland_debug:
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(3, 0, 0)
         return external_client_launcher.launch(command);
-#else
-        external_client_launcher.launch(command);
-        return external_client_launcher.pid();
-#endif
 
     case egmde::Launcher::Mode::x11:
     case egmde::Launcher::Mode::x11_debug:
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(3, 0, 0)
         return external_client_launcher.launch_using_x11(command);
-#else
-        external_client_launcher.launch_using_x11(command);
-        return external_client_launcher.pid();
-#endif
     default:
         return -1; // We can't get here, but the compiler complains
     }

@@ -63,22 +63,11 @@ int main(int argc, char const* argv[])
         }
     };
 
-    // Protocols we're reserving for shell components
-    std::set<std::string> const shell_protocols{
-        WaylandExtensions::zwlr_layer_shell_v1,
-        WaylandExtensions::zxdg_output_manager_v1,
-        WaylandExtensions::zwlr_foreign_toplevel_manager_v1};
-
     // Protocols that are "experimental" in Mir but we want to allow
     auto const experimental_protocols = {"zwp_pointer_constraints_v1", "zwp_relative_pointer_manager_v1"};
 
     WaylandExtensions extensions;
     auto const supported_protocols = extensions.supported();
-
-    for (auto const& protocol : shell_protocols)
-    {
-        extensions.enable(protocol);
-    }
 
     for (auto const& protocol : experimental_protocols)
     {
@@ -92,6 +81,26 @@ int main(int argc, char const* argv[])
         }
     }
 
+    // Protocols we're reserving for shell components
+    std::set<std::string> const shell_protocols{
+        WaylandExtensions::zwlr_layer_shell_v1,
+        WaylandExtensions::zxdg_output_manager_v1,
+        WaylandExtensions::zwlr_foreign_toplevel_manager_v1};
+
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(3, 4, 0)
+    for (auto const& protocol : shell_protocols)
+    {
+        extensions.conditionally_enable(protocol, [&](WaylandExtensions::EnableInfo const& info)
+            {
+                return shell_component_pids.find(pid_of(info.app())) != end(shell_component_pids);
+            });
+    }
+#else
+    for (auto const& protocol : shell_protocols)
+    {
+        extensions.enable(protocol);
+    }
+
     extensions.set_filter([&](Application const& app, char const* protocol)
         {
             if (shell_protocols.find(protocol) == end(shell_protocols))
@@ -99,6 +108,7 @@ int main(int argc, char const* argv[])
 
             return shell_component_pids.find(pid_of(app)) != end(shell_component_pids);
         });
+#endif
 
     egmde::ShellCommands commands{runner, launcher, terminal_cmd};
 

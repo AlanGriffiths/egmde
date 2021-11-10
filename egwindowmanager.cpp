@@ -167,11 +167,7 @@ void egmde::WindowManagerPolicy::dock_active_window_left()
         {
             if (auto active_window = tools.active_window())
             {
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(3, 0, 0)
                 auto const active_rect = tools.active_application_zone().extents();
-#else
-                auto const active_rect = tools.active_output();
-#endif
                 auto& window_info = tools.info_for(active_window);
                 WindowSpecification modifications;
 
@@ -245,11 +241,7 @@ void egmde::WindowManagerPolicy::dock_active_window_right()
         {
             if (auto active_window = tools.active_window())
             {
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(3, 0, 0)
                 auto const active_rect = tools.active_application_zone().extents();
-#else
-                auto const active_rect = tools.active_output();
-#endif
                 auto& window_info = tools.info_for(active_window);
                 WindowSpecification modifications;
 

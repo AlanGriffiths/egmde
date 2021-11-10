@@ -63,12 +63,6 @@ int main(int argc, char const* argv[])
         }
     };
 
-    // Protocols we're reserving for shell components
-    std::set<std::string> const shell_protocols{
-        WaylandExtensions::zwlr_layer_shell_v1,
-        WaylandExtensions::zxdg_output_manager_v1,
-        WaylandExtensions::zwlr_foreign_toplevel_manager_v1};
-
     // Protocols that are "experimental" in Mir but we want to allow
     auto const experimental_protocols = {"zwp_pointer_constraints_v1", "zwp_relative_pointer_manager_v1"};
 
@@ -86,6 +80,12 @@ int main(int argc, char const* argv[])
             mir::log_debug("This version of Mir doesn't support the Wayland extension %s", protocol);
         }
     }
+
+    // Protocols we're reserving for shell components
+    std::set<std::string> const shell_protocols{
+        WaylandExtensions::zwlr_layer_shell_v1,
+        WaylandExtensions::zxdg_output_manager_v1,
+        WaylandExtensions::zwlr_foreign_toplevel_manager_v1};
 
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(3, 4, 0)
     for (auto const& protocol : shell_protocols)

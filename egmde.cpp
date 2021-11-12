@@ -92,7 +92,8 @@ int main(int argc, char const* argv[])
     {
         extensions.conditionally_enable(protocol, [&](WaylandExtensions::EnableInfo const& info)
             {
-                return shell_component_pids.find(pid_of(info.app())) != end(shell_component_pids);
+                return shell_component_pids.find(pid_of(info.app())) != end(shell_component_pids) ||
+                    info.user_preference().value_or(false);
             });
     }
 #else

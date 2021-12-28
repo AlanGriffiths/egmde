@@ -63,3 +63,32 @@ install(PROGRAMS ${CMAKE_BINARY_DIR}/egmde-launch ${CMAKE_BINARY_DIR}/egmde-term
 install(FILES ${CMAKE_SOURCE_DIR}/egmde.desktop
     DESTINATION /usr/share/wayland-sessions/
 )
+
+# TODO restore wlcs tests when mirtest-dev exists again
+#enable_testing()
+#pkg_check_modules(MIRTEST mirtest REQUIRED)
+#pkg_get_variable(WLCS_BINARY wlcs test_runner)
+#
+#add_library(egmde-wlcs MODULE
+#  wlcs_fixture.cpp)
+#
+#target_include_directories(egmde-wlcs
+#  PUBLIC SYSTEM ${MIRTEST_INCLUDE_DIRS})
+#
+#target_link_libraries(egmde-wlcs
+#  egmde-wayland
+#  ${MIRTEST_LIBRARIES}
+#  ${MIRWAYLAND_LDFLAGS}
+#  ${WAYLAND_CLIENT_LDFLAGS}
+#  ${WAYLAND_SERVER_LDFLAGS}
+#)
+#
+#set_target_properties(egmde-wlcs
+#  PROPERTIES
+#  PREFIX ""
+#)
+#
+#add_test(
+#  NAME wlcs
+#  COMMAND ${WLCS_BINARY} ${GTEST_FILTER} ${CMAKE_BINARY_DIR}/egmde-wlcs.so
+#)

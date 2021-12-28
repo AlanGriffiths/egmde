@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2019 Octopull Ltd.
+ * Copyright © 2016-2021 Octopull Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -92,13 +92,20 @@ int main(int argc, char const* argv[])
         }
     }
 
-    extensions.set_filter([&](Application const& app, char const* protocol)
-        {
-            if (shell_protocols.find(protocol) == end(shell_protocols))
-                return true;
-
-            return shell_component_pids.find(pid_of(app)) != end(shell_component_pids);
-        });
+    // Protocols we're reserving for shell components
+    for (auto const& protocol : {
+        WaylandExtensions::zwlr_layer_shell_v1,
+        WaylandExtensions::zxdg_output_manager_v1,
+        WaylandExtensions::zwlr_foreign_toplevel_manager_v1,
+        WaylandExtensions::zwp_virtual_keyboard_manager_v1,
+        WaylandExtensions::zwp_input_method_manager_v2})
+    {
+        extensions.conditionally_enable(protocol, [&](WaylandExtensions::EnableInfo const& info)
+            {
+                return shell_component_pids.find(pid_of(info.app())) != end(shell_component_pids) ||
+                    info.user_preference().value_or(false);
+            });
+    }
 
     egmde::ShellCommands commands{runner, launcher, terminal_cmd};
 

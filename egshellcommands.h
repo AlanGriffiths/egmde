@@ -1,5 +1,5 @@
 /*
- * Copyright © 2020 Octopull Ltd.
+ * Copyright © 2022 Octopull Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -23,6 +23,7 @@
 #include <miral/toolkit_event.h>
 
 #include <atomic>
+#include <functional>
 #include <set>
 #include <string>
 #include <mutex>
@@ -40,7 +41,7 @@ class WindowManagerPolicy;
 class ShellCommands
 {
 public:
-    ShellCommands(MirRunner& runner, Launcher& launcher, std::string const& terminal_cmd);
+    ShellCommands(MirRunner& runner, Launcher& launcher, std::string const& terminal_cmd, std::function<void()> const& launch_app);
 
     void init_window_manager(WindowManagerPolicy* wm);
 
@@ -61,6 +62,7 @@ private:
     MirRunner& runner;
     Launcher& launcher;
     std::string const terminal_cmd;
+    std::function<void()> const& launch_app;
     WindowManagerPolicy* wm = nullptr;
     std::atomic<bool> shell_commands_active = true;
 

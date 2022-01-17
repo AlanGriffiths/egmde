@@ -122,14 +122,15 @@ void egmde::WindowManagerPolicy::advise_new_window(const miral::WindowInfo &wind
 void egmde::WindowManagerPolicy::advise_delete_window(const miral::WindowInfo &window_info)
 {
     WindowManagementPolicy::advise_delete_window(window_info);
-    commands->advise_delete_window_for(window_info.window().application());
+    if (is_application(window_info.depth_layer()))
+    {
+        commands->advise_delete_window_for(window_info.window().application());
+    }
 }
 
 void egmde::WindowManagerPolicy::advise_delete_app(miral::ApplicationInfo const& application)
 {
     WindowManagementPolicy::advise_delete_app(application);
-
-    commands->del_shell_app(application.application());
 }
 
 void egmde::WindowManagerPolicy::workspace_up(bool take_active)

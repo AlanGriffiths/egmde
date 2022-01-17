@@ -35,6 +35,7 @@
 #include <exception>
 #include <iostream>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 #include <thread>
@@ -460,7 +461,7 @@ void do_autostart(ExternalClientLauncher& external_client_launcher)
 
     std::set<std::string> encountered_files;
 
-    for (app_details const& autostart : desktop_listing)
+    for (app_details const autostart : desktop_listing)
     {
         if (encountered_files.insert(autostart.desktop_file).second == false)
             continue;

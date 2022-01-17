@@ -48,9 +48,6 @@ public:
     void advise_new_window_for(Application const& app);
     void advise_delete_window_for(Application const& app);
 
-    void add_shell_app(Application const& app);
-    void del_shell_app(Application const& app);
-
     auto input_event(MirEvent const* event) -> bool;
     auto shell_keyboard_enabled() const -> bool
         { return shell_commands_active; }

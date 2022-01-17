@@ -29,38 +29,18 @@ egmde::ShellCommands::ShellCommands(MirRunner& runner, Launcher& launcher, std::
 {
 }
 
-void egmde::ShellCommands::advise_new_window_for(miral::Application const& app)
+void egmde::ShellCommands::advise_new_window_for(miral::Application const& /*app*/)
 {
     std::lock_guard<decltype(mutex)> lock{mutex};
 
-    if (shell_apps.find(app) == shell_apps.end())
-    {
-        ++app_windows;
-    }
+    ++app_windows;
 }
 
-void egmde::ShellCommands::advise_delete_window_for(miral::Application const& app)
+void egmde::ShellCommands::advise_delete_window_for(miral::Application const& /*app*/)
 {
     std::lock_guard<decltype(mutex)> lock{mutex};
 
-    if (shell_apps.find(app) == shell_apps.end())
-    {
-        --app_windows;
-    }
-}
-
-void egmde::ShellCommands::add_shell_app(miral::Application const& app)
-{
-    std::lock_guard<decltype(mutex)> lock{mutex};
-
-    shell_apps.insert(app);
-}
-
-void egmde::ShellCommands::del_shell_app(miral::Application const& app)
-{
-    std::lock_guard<decltype(mutex)> lock{mutex};
-
-    shell_apps.erase(app);
+    --app_windows;
 }
 
 auto egmde::ShellCommands::keyboard_shortcuts(MirKeyboardEvent const* kev) -> bool
@@ -90,8 +70,6 @@ auto egmde::ShellCommands::keyboard_shortcuts(MirKeyboardEvent const* kev) -> bo
         if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
             return false;
 
-//        add_shell_app(launcher.session());
-//        launcher.show();
         launch_app();
         return true;
 
@@ -180,7 +158,7 @@ auto egmde::ShellCommands::touch_shortcuts(MirTouchEvent const* tev) -> bool
     if (mir_touch_event_axis_value(tev, 0, mir_touch_axis_x) >= 5)
         return false;
 
-    launcher.show();
+    launch_app();
     in_touch_gesture = true;
     return true;
 }

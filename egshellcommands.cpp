@@ -1,5 +1,5 @@
 /*
- * Copyright © 2020 Octopull Ltd.
+ * Copyright © 2022 Octopull Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -24,8 +24,8 @@
 
 #include <xkbcommon/xkbcommon-keysyms.h>
 
-egmde::ShellCommands::ShellCommands(MirRunner& runner, Launcher& launcher, std::string const& terminal_cmd) :
-    runner{runner}, launcher{launcher}, terminal_cmd{terminal_cmd}
+egmde::ShellCommands::ShellCommands(MirRunner& runner, Launcher& launcher, std::string const& terminal_cmd, std::function<void()> const& launch_app) :
+    runner{runner}, launcher{launcher}, terminal_cmd{terminal_cmd}, launch_app{launch_app}
 {
 }
 
@@ -90,8 +90,9 @@ auto egmde::ShellCommands::keyboard_shortcuts(MirKeyboardEvent const* kev) -> bo
         if (mir_keyboard_event_action(kev) != mir_keyboard_action_down)
             return false;
 
-        add_shell_app(launcher.session());
-        launcher.show();
+//        add_shell_app(launcher.session());
+//        launcher.show();
+        launch_app();
         return true;
 
     case XKB_KEY_BackSpace:

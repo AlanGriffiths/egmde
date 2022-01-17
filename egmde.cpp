@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2021 Octopull Ltd.
+ * Copyright © 2016-2022 Octopull Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3,
@@ -52,6 +52,7 @@ int main(int argc, char const* argv[])
     egmde::Launcher launcher{external_client_launcher, terminal_cmd};
 
     std::set<pid_t> shell_component_pids;
+    std::atomic<pid_t> shell_wofi_pid{-1};
 
     auto run_apps = [&](std::string const& apps)
     {
@@ -92,11 +93,18 @@ int main(int argc, char const* argv[])
         extensions.conditionally_enable(protocol, [&](WaylandExtensions::EnableInfo const& info)
             {
                 return shell_component_pids.find(pid_of(info.app())) != end(shell_component_pids) ||
-                    info.user_preference().value_or(false);
+                    info.user_preference().value_or(false) || shell_wofi_pid == pid_of(info.app());
             });
     }
 
-    egmde::ShellCommands commands{runner, launcher, terminal_cmd};
+    std::function<void()> launch_app = [&launcher]{ launcher.show(); };
+    std::function<void(mir::optional_value<std::string> const&)> const app_launcher = [&](auto& cmd) {
+        if (cmd.is_set())
+        {
+            launch_app = [&, cmd=cmd.value()] { shell_wofi_pid = launcher.run_app(cmd, egmde::Launcher::Mode::wayland); };
+        }
+    };
+    egmde::ShellCommands commands{runner, launcher, terminal_cmd, launch_app};
 
     runner.add_stop_callback([&] { for (auto const pid : shell_component_pids) kill(pid, SIGTERM); });
     runner.add_stop_callback([&] { wallpaper.stop(); });
@@ -122,6 +130,7 @@ int main(int argc, char const* argv[])
                               "no-of-workspaces", "Number of workspaces [1..32]", no_of_workspaces}),
             external_client_launcher,
             CommandLineOption{run_apps, "shell-components", "Colon separated shell components to launch on startup", ""},
+            CommandLineOption{app_launcher, "shell-app-launcher", "External app launcher command"},
             CommandLineOption{[&](bool autostart){ if (autostart) launcher.autostart_apps(); },
                               "shell-enable-autostart", "Autostart apps during startup"},
             StartupInternalClient{std::ref(wallpaper)},

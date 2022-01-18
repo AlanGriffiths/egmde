@@ -26,7 +26,7 @@
 
 namespace
 {
-void render_gradient(int32_t width, int32_t height, unsigned char* row_, uint8_t* bottom_colour, uint8_t* top_colour)
+void render_gradient(int32_t width, int32_t height, unsigned char* row_, uint8_t const* bottom_colour, uint8_t const* top_colour)
 {
     auto row = row_;
     for (int j = 0; j < height; j++)

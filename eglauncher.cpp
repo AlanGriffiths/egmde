@@ -37,6 +37,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 #include <thread>
 
@@ -130,7 +131,7 @@ auto unescape(std::string const& in) -> std::string
 
 struct app_details
 {
-    app_details(boost::filesystem::path desktop_path)
+    app_details(boost::filesystem::path const& desktop_path)
     {
         static std::string const categories_key{"Categories="};
         static std::string const name_key{"Name="};
@@ -202,13 +203,13 @@ struct app_details
     bool nodisplay = false;
 };
 
-auto load_details(file_list desktop_listing) -> std::vector<app_details>
+auto load_details(file_list const& desktop_listing) -> std::vector<app_details>
 {
     std::vector<app_details> details;
 
     for (auto const& desktop_path : desktop_listing)
     {
-            details.push_back(desktop_path);
+            details.emplace_back(desktop_path);
     }
 
     details.erase(
@@ -483,11 +484,11 @@ void do_autostart(ExternalClientLauncher& external_client_launcher)
 
 struct egmde::Launcher::Self : egmde::FullscreenClient
 {
-    Self(wl_display* display, ExternalClientLauncher& external_client_launcher, std::string const& terminal_cmd);
+    Self(wl_display* display, ExternalClientLauncher& external_client_launcher, std::string terminal_cmd);
 
     void draw_screen(SurfaceInfo& info) const override;
     void show_screen(SurfaceInfo& info) const;
-    void clear_screen(SurfaceInfo& info) const;
+    static void clear_screen(SurfaceInfo& info) ;
 
     void start();
 
@@ -517,15 +518,14 @@ private:
 
     std::vector<app_details> const apps = load_details(list_desktop_files());
 
-    std::mutex mutable mutex;
     std::vector<app_details>::const_iterator current_app{apps.begin()};
     std::atomic<bool> running{false};
     std::atomic<Output const*> mutable showing{nullptr};
 };
 
-egmde::Launcher::Launcher(miral::ExternalClientLauncher& external_client_launcher, std::string const& terminal_cmd) :
+egmde::Launcher::Launcher(miral::ExternalClientLauncher& external_client_launcher, std::string terminal_cmd) :
     external_client_launcher{external_client_launcher},
-    terminal_cmd{terminal_cmd}
+    terminal_cmd{std::move(terminal_cmd)}
 {
 }
 
@@ -560,7 +560,7 @@ void egmde::Launcher::operator()(wl_display* display)
 
 auto egmde::Launcher::run_app(std::string app, Mode mode) const -> pid_t
 {
-    return ::run_app(external_client_launcher, app, mode);
+    return ::run_app(external_client_launcher, std::move(app), mode);
 }
 
 void egmde::Launcher::autostart_apps() const
@@ -752,10 +752,10 @@ void egmde::Launcher::Self::prev_app()
     for_each_surface([this](auto& info) { this->draw_screen(info); });
 }
 
-egmde::Launcher::Self::Self(wl_display* display, ExternalClientLauncher& external_client_launcher, std::string const& terminal_cmd) :
+egmde::Launcher::Self::Self(wl_display* display, ExternalClientLauncher& external_client_launcher, std::string terminal_cmd) :
     FullscreenClient{display},
     external_client_launcher{external_client_launcher},
-    terminal_cmd{terminal_cmd}
+    terminal_cmd{std::move(terminal_cmd)}
 {
     wl_display_roundtrip(display);
     wl_display_roundtrip(display);
@@ -847,7 +847,7 @@ void egmde::Launcher::Self::show_screen(SurfaceInfo& info) const
     wl_surface_commit(info.surface);
 }
 
-void egmde::Launcher::Self::clear_screen(SurfaceInfo& info) const
+void egmde::Launcher::Self::clear_screen(SurfaceInfo& info)
 {
     info.clear_window();
 }

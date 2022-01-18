@@ -26,7 +26,7 @@
 #include <sys/eventfd.h>
 #include <sys/mman.h>
 #include <sys/poll.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <sys/mman.h>
 #include <xkbcommon/xkbcommon.h>
 
@@ -269,7 +269,7 @@ void egmde::FullscreenClient::on_new_output(Output const* output)
     wl_display_flush(display);
 }
 
-auto egmde::FullscreenClient::make_shm_pool(size_t size, void** data) const
+auto egmde::FullscreenClient::make_shm_pool(off_t size, void** data) const
 -> std::unique_ptr<wl_shm_pool, std::function<void(wl_shm_pool*)>>
 {
     static auto (*open_shm_file)() -> mir::Fd = []
@@ -304,13 +304,13 @@ auto egmde::FullscreenClient::make_shm_pool(size_t size, void** data) const
         BOOST_THROW_EXCEPTION((std::system_error{error, std::system_category(), "Failed to allocate shm buffer"}));
     }
 
-    if ((*data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED)
+    if ((*data = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED)
     {
         BOOST_THROW_EXCEPTION((std::system_error{errno, std::system_category(), "Failed to mmap buffer"}));
     }
 
     return {
-        wl_shm_create_pool(shm, fd, size),
+        wl_shm_create_pool(shm, fd, static_cast<int32_t>(size)),
         [size](auto* shm)
         {
             wl_shm_pool_destroy(shm);
@@ -468,7 +468,7 @@ void egmde::FullscreenClient::flush_wl() const
 
 void egmde::FullscreenClient::keyboard_keymap(wl_keyboard* /*keyboard*/, uint32_t /*format*/, int32_t fd, uint32_t size)
 {
-    char* keymap_string = static_cast<decltype(keymap_string)>(mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0));
+    char* keymap_string = static_cast<decltype(keymap_string)>(mmap(nullptr, size, PROT_READ, MAP_SHARED, fd, 0));
     xkb_keymap_unref(keyboard_map_);
     keyboard_map_ = xkb_keymap_new_from_string(keyboard_context(), keymap_string, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
     munmap(keymap_string, size);

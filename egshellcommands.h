@@ -41,7 +41,7 @@ class WindowManagerPolicy;
 class ShellCommands
 {
 public:
-    ShellCommands(MirRunner& runner, Launcher& launcher, std::string const& terminal_cmd, std::function<void()> const& launch_app);
+    ShellCommands(MirRunner& runner, Launcher& launcher, std::string terminal_cmd, std::function<void()> const& launch_app);
 
     void init_window_manager(WindowManagerPolicy* wm);
 
@@ -49,7 +49,7 @@ public:
     void advise_delete_window_for(Application const& app);
 
     auto input_event(MirEvent const* event) -> bool;
-    auto shell_keyboard_enabled() const -> bool
+    [[nodiscard]] auto shell_keyboard_enabled() const -> bool
         { return shell_commands_active; }
 
 private:
@@ -64,7 +64,6 @@ private:
     std::atomic<bool> shell_commands_active = true;
 
     std::mutex mutex;
-    std::set<Application> shell_apps;
     int app_windows = 0;
     bool in_touch_gesture = false;
 };

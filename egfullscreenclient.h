@@ -47,7 +47,7 @@ public:
 
     void stop();
 
-    auto make_shm_pool(size_t size, void** data) const
+    auto make_shm_pool(off_t size, void** data) const
     -> std::unique_ptr<wl_shm_pool, std::function<void(wl_shm_pool*)>>;
 
     wl_display* display = nullptr;
@@ -111,7 +111,7 @@ public:
 
     struct SurfaceInfo
     {
-        SurfaceInfo(Output const* output);
+        explicit SurfaceInfo(Output const* output);
         ~SurfaceInfo();
 
         void clear_window();
@@ -145,7 +145,6 @@ protected:
         uint32_t group);
     virtual void keyboard_repeat_info(wl_keyboard* wl_keyboard, int32_t rate, int32_t delay);
     xkb_context* keyboard_context() const { return keyboard_context_; }
-    xkb_keymap* keyboard_map() const { return keyboard_map_; }
     xkb_state* keyboard_state() const { return keyboard_state_; }
 
     virtual void pointer_enter(wl_pointer* pointer, uint32_t serial, wl_surface* surface, wl_fixed_t x, wl_fixed_t y);

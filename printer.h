@@ -41,7 +41,7 @@ private:
     struct Codecvt : std::codecvt_byname<wchar_t, char, std::mbstate_t>
     {
         Codecvt() : std::codecvt_byname<wchar_t, char, std::mbstate_t>("C") {}
-        ~Codecvt() = default;
+        ~Codecvt() override = default;
     };
 
     std::wstring_convert<Codecvt> converter;

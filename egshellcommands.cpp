@@ -155,7 +155,11 @@ auto egmde::ShellCommands::touch_shortcuts(MirTouchEvent const* tev) -> bool
     if (mir_touch_event_action(tev, 0) != mir_touch_action_down)
         return false;
 
-    if (mir_touch_event_axis_value(tev, 0, mir_touch_axis_x) >= 5)
+    auto const active_output = wm->active_output();
+    Rectangle const launch_area{active_output.top_left, Size{active_output.size.width/192, active_output.size.height}};
+    Point const touch_point{mir_touch_event_axis_value(tev, 0, mir_touch_axis_x), mir_touch_event_axis_value(tev, 0, mir_touch_axis_y)};
+
+    if (!launch_area.contains(touch_point))
         return false;
 
     launch_app();

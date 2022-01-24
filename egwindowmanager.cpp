@@ -435,3 +435,10 @@ void egmde::WindowManagerPolicy::focus_prev_within_application()
     tools.invoke_under_lock([this] { tools.focus_prev_within_application(); });
 }
 
+auto egmde::WindowManagerPolicy::active_output() -> Rectangle const
+{
+    Rectangle result;
+    tools.invoke_under_lock([&result, this] { result = tools.active_output(); });
+    return result;
+}
+

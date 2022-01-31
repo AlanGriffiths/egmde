@@ -36,7 +36,7 @@ struct WorkspaceInfo
 {
     bool in_hidden_workspace{false};
 
-    MirWindowState old_state;
+    MirWindowState old_state = mir_window_state_unknown;
 };
 
 inline WorkspaceInfo& workspace_info_for(WindowInfo const& info)
@@ -54,7 +54,7 @@ inline bool is_application(MirDepthLayer layer)
 
     default:;
         return false;
-    };
+    }
 }
 }
 

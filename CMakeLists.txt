@@ -20,7 +20,6 @@ add_executable(egmde
     eglauncher.cpp eglauncher.h
     egwallpaper.cpp egwallpaper.h
     egwindowmanager.cpp egwindowmanager.h
-    egworker.cpp egworker.h
     printer.cpp printer.h
     egfullscreenclient.cpp egfullscreenclient.h
     egshellcommands.cpp egshellcommands.h

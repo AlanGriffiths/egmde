@@ -24,8 +24,10 @@
 
 #include <xkbcommon/xkbcommon-keysyms.h>
 
-egmde::ShellCommands::ShellCommands(MirRunner& runner, Launcher& launcher, std::string const& terminal_cmd, std::function<void()> const& launch_app) :
-    runner{runner}, launcher{launcher}, terminal_cmd{terminal_cmd}, launch_app{launch_app}
+#include <utility>
+
+egmde::ShellCommands::ShellCommands(MirRunner& runner, Launcher& launcher, std::string  terminal_cmd, std::function<void()> const& launch_app) :
+    runner{runner}, launcher{launcher}, terminal_cmd{std::move(terminal_cmd)}, launch_app{launch_app}
 {
 }
 

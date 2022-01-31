@@ -68,7 +68,7 @@ int main(int argc, char const* argv[])
     auto const experimental_protocols = {"zwp_pointer_constraints_v1", "zwp_relative_pointer_manager_v1"};
 
     WaylandExtensions extensions;
-    auto const supported_protocols = extensions.supported();
+    auto const supported_protocols = miral::WaylandExtensions::supported();
 
     for (auto const& protocol : experimental_protocols)
     {

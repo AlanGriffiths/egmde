@@ -32,7 +32,7 @@ namespace egmde
 class Launcher
 {
 public:
-    Launcher(miral::ExternalClientLauncher& external_client_launcher, std::string const& terminal_cmd);
+    Launcher(miral::ExternalClientLauncher& external_client_launcher, std::string terminal_cmd);
 
     // These operators are the protocol for an "Internal Client"
     void operator()(wl_display* display);

@@ -2,7 +2,7 @@
 
 set -xe
 
-for terminal in x-terminal-emulator xdg-terminal weston-terminal
+for terminal in x-terminal-emulator xdg-terminal weston-terminal gnome-terminal
 do
   if terminal_command=$(command -v $terminal); then break; fi
 done

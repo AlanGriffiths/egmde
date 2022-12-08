@@ -104,6 +104,14 @@ public:
 
         static void scale(void* data, wl_output* wl_output, int32_t factor);
 
+#ifdef WL_OUTPUT_NAME_SINCE_VERSION
+        static void name(void* data, wl_output* wl_output, const char* name);
+#endif
+
+#ifdef WL_OUTPUT_DESCRIPTION_SINCE_VERSION
+        static void description(void* data, wl_output* wl_output, const char* description);
+#endif
+
         static wl_output_listener const output_listener;
 
         std::function<void(Output const&)> on_done;
@@ -156,6 +164,9 @@ protected:
     virtual void pointer_axis_source(wl_pointer* pointer, uint32_t axis_source);
     virtual void pointer_axis_stop(wl_pointer* pointer, uint32_t time, uint32_t axis);
     virtual void pointer_axis_discrete(wl_pointer* pointer, uint32_t axis, int32_t discrete);
+#ifdef WL_POINTER_AXIS_VALUE120_SINCE_VERSION
+    virtual void pointer_axis_value120(wl_pointer* pointer, uint32_t axis, int32_t value120);
+#endif
 
     virtual void touch_down(
         wl_touch* touch,

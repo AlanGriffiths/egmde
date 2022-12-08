@@ -104,6 +104,14 @@ public:
 
         static void scale(void* data, wl_output* wl_output, int32_t factor);
 
+#ifdef WL_OUTPUT_NAME_SINCE_VERSION
+        static void name(void* data, wl_output* wl_output, const char* name);
+#endif
+
+#ifdef WL_OUTPUT_DESCRIPTION_SINCE_VERSION
+        static void description(void* data, wl_output* wl_output, const char* description);
+#endif
+
         static wl_output_listener const output_listener;
 
         std::function<void(Output const&)> on_done;

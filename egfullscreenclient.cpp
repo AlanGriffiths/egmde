@@ -77,6 +77,18 @@ void egmde::FullscreenClient::Output::scale(void* data, wl_output* /*wl_output*/
     output->scale_factor = factor;
 }
 
+#ifdef WL_OUTPUT_NAME_SINCE_VERSION
+void egmde::FullscreenClient::Output::name(void* /* data */, wl_output* /*wl_output*/, const char* /* name */)
+{
+}
+#endif
+
+#ifdef WL_OUTPUT_DESCRIPTION_SINCE_VERSION
+void egmde::FullscreenClient::Output::description(void* /* data */, wl_output* /*wl_output*/, const char* /* description */)
+{
+}
+#endif
+
 egmde::FullscreenClient::Output::Output(
     wl_output* output,
     std::function<void(Output const&)> on_constructed,
@@ -99,6 +111,12 @@ wl_output_listener const egmde::FullscreenClient::Output::output_listener = {
     &mode,
     &done,
     &scale,
+#ifdef WL_OUTPUT_NAME_SINCE_VERSION
+    &name,
+#endif
+#ifdef WL_OUTPUT_DESCRIPTION_SINCE_VERSION
+    &description,
+#endif
 };
 
 egmde::FullscreenClient::SurfaceInfo::SurfaceInfo(Output const* output) :

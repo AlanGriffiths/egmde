@@ -581,6 +581,12 @@ void egmde::FullscreenClient::pointer_axis_discrete(wl_pointer* /*pointer*/, uin
 {
 }
 
+#ifdef WL_POINTER_AXIS_VALUE120_SINCE_VERSION
+void egmde::FullscreenClient::pointer_axis_value120(wl_pointer* /*pointer*/, uint32_t /*axis*/, int32_t /*value120*/)
+{
+}
+#endif
+
 void egmde::FullscreenClient::touch_down(
     wl_touch* /*touch*/,
     uint32_t /*serial*/,
@@ -646,6 +652,9 @@ void egmde::FullscreenClient::seat_capabilities(wl_seat* seat, uint32_t capabili
                 [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->pointer_axis_source(args...); },
                 [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->pointer_axis_stop(args...); },
                 [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->pointer_axis_discrete(args...); },
+#ifdef WL_POINTER_AXIS_VALUE120_SINCE_VERSION
+                [](void* self, auto... args) { static_cast<FullscreenClient*>(self)->pointer_axis_value120(args...); },
+#endif
             };
 
         struct wl_pointer *pointer = wl_seat_get_pointer(seat);

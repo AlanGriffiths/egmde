@@ -112,7 +112,6 @@ egmde::Wallpaper::Self::Self(wl_display* display, uint8_t* bottom_colour, uint8_
     top_colour{top_colour}
 {
     wl_display_roundtrip(display);
-    wl_display_roundtrip(display);
 }
 
 void egmde::Wallpaper::stop()
